@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lazy S Ranch</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2ede6;
+    --dark: #1a2e1c;
+    --mid: #2c4a2e;
+    --accent: #e8823a;
+    --muted: #8a9e8c;
+    --text: #2a3a2c;
+    --text-light: #6b7d6c;
+    --card: #fff;
+    --border: #d5cfc5;
+    --fancy: #4a7c59;
+    --choice: #7ab87a;
+    --other: #b5cca0;
+    --waste: #d4b896;
+    --juice: #e8983a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--dark);
+    color: white;
+    padding: 0 28px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    gap: 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: white;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .nav-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 100%;
+    flex: 1;
+  }
+
+  .nav-tab {
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    padding: 0 18px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .nav-tab:hover { color: rgba(255,255,255,0.8); }
+
+  .nav-tab.active {
+    color: white;
+    border-bottom-color: var(--accent);
+  }
+
+  .nav-tab.disabled {
+    color: rgba(255,255,255,0.25);
+    cursor: default;
+  }
+
+  .menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  @media (max-width: 640px) {
+    .nav-tabs { display: none; }
+    .menu-btn { display: flex; }
+    .header { padding: 0 16px; }
+    .brand { font-size: 17px; }
+  }
+
+  /* Mobile menu */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background: var(--dark);
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .mobile-menu.open { display: block; }
+
+  .mobile-menu-item {
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+
+  .mobile-menu-item.active {
+    color: white;
+    border-left-color: var(--accent);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .mobile-menu-item.disabled { color: rgba(255,255,255,0.25); cursor: default; }
+
+  /* ── CONTENT ── */
+  .content { max-width: 1300px; margin: 0 auto; padding: 28px 24px; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── PAGE TITLE BAR ── */
+  .page-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 20px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 22px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-right: 4px;
+  }
+
+  .filter-bar select {
+    font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7d6c'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+  }
+
+  .filter-bar select:focus { outline: none; border-color: var(--mid); }
+
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 8px;
+  }
+
+  .month-arrow {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    line-height: 1;
+  }
+
+  .month-arrow:hover {
+    background: var(--dark);
+    color: white;
+    border-color: var(--dark);
+  }
+
+  .month-display {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 90px;
+    text-align: center;
+  }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .toggle-switch input { display: none; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-slider { background: var(--mid); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 18px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.fancy { background: var(--fancy); }
+  .legend-dot.choice { background: var(--choice); }
+  .legend-dot.other { background: var(--other); }
+  .legend-dot.waste { background: var(--waste); }
+  .legend-dot.juice { background: var(--juice); }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13px; }
+
+  thead th {
+    background: var(--dark);
+    color: rgba(255,255,255,0.7);
+    font-family: 'Jost', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  thead th:hover { color: white; }
+
+  thead th.sort-asc::after { content: ' ↑'; color: var(--accent); }
+  thead th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(0,0,0,0.02); }
+
+  tbody td {
+    padding: 11px 14px;
+    vertical-align: middle;
+    color: var(--text);
+  }
+
+  .row-group td { font-weight: 500; cursor: pointer; }
+  .row-empty td { color: var(--text-light); background: rgba(0,0,0,0.01); }
+
+  .row-detail {
+    display: none;
+    background: rgba(242,237,230,0.5);
+  }
+  .row-detail.visible { display: table-row; }
+
+  .row-detail td {
+    font-size: 12px;
+    color: var(--text-light);
+    padding: 8px 14px 8px 26px;
+  }
+
+  .picked-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #2e7d32;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 8px;
+    vertical-align: middle;
+    white-space: nowrap;
+    letter-spacing: 0.03em;
+  }
+
+  .col-hidden { display: none; }
+
+  .col-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text-light);
+    font-size: 11px;
+    font-family: 'Jost', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .col-toggle-btn:hover { border-color: var(--mid); color: var(--text); }
+  .col-toggle-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
+  .col-toggle-btn .btn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+    display: inline-block;
+    font-size: 9px;
+    transition: transform 0.2s;
+    color: var(--accent);
+    margin-right: 4px;
+  }
+
+  .expand-icon.expanded { transform: rotate(90deg); }
+
+  /* ── GRADE BAR ── */
+  .grade-bar {
+    display: flex;
+    height: 20px;
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 120px;
+  }
+
+  .grade-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+
+  .grade-seg:hover { opacity: 0.85; }
+  .grade-seg.fancy { background: var(--fancy); }
+  .grade-seg.choice { background: var(--choice); }
+  .grade-seg.other { background: var(--other); }
+  .grade-seg.waste { background: var(--waste); }
+  .grade-seg.juice { background: var(--juice); }
+
+  /* ── CALENDAR ── */
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .cal-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    min-height: 72px;
+    padding: 6px;
+    position: relative;
+    font-size: 12px;
+  }
+
+  .cal-cell.header {
+    min-height: unset;
+    background: var(--dark);
+    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 8px 4px;
+    border-color: var(--dark);
+    border-radius: 4px;
+  }
+
+  .cal-cell.has-data {
+    border-color: var(--mid);
+    cursor: pointer;
+    background: linear-gradient(135deg, white 0%, #f0f5f0 100%);
+  }
+
+  .cal-cell.has-data:hover { border-color: var(--accent); box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+
+  .cal-cell.empty { background: transparent; border-color: transparent; min-height: 72px; }
+
+  .cal-day-num {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+
+  .cal-cell.has-data .cal-day-num { color: var(--dark); }
+
+  .cal-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin: 1px 1px 0 0;
+    white-space: nowrap;
+  }
+
+  .cal-pill.CLEMENTINES { background: #fff3e0; color: #e65100; }
+  .cal-pill.MURCOTTS { background: #fce4ec; color: #880e4f; }
+  .cal-pill.LEMONS { background: #fffde7; color: #f57f17; }
+  .cal-pill.CARA-CARA { background: #fbe9e7; color: #bf360c; }
+  .cal-pill.NAVEL, .cal-pill.NAVELS { background: #e8f5e9; color: #1b5e20; }
+  .cal-pill.LATE-NAVELS, .cal-pill.LATE_NAVELS { background: #e0f2f1; color: #004d40; }
+  .cal-pill.GRAPEFRUIT { background: #f3e5f5; color: #4a148c; }
+
+  .cal-fb {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* ── MODAL ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal-box {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 28px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+    position: relative;
+  }
+
+  .modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 18px;
+    padding-right: 32px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 18px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--text-light);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .modal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .modal-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    border-bottom: 2px solid var(--border);
+  }
+  .modal-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  .modal-table tr:last-child td { border-bottom: none; }
+
+  /* ── COMING SOON ── */
+  .coming-soon {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-light);
+  }
+
+  .coming-soon-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+  .coming-soon-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    color: var(--dark);
+    margin-bottom: 6px;
+  }
+
+  @media (max-width: 640px) {
+    .content { padding: 16px 12px; }
+    .cal-grid { gap: 2px; }
+    .cal-cell { min-height: 56px; padding: 4px; }
+    .page-title { font-size: 22px; }
+    .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 8px;
+  }
+
+  .month-arrow {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    line-height: 1;
+  }
+
+  .month-arrow:hover {
+    background: var(--dark);
+    color: white;
+    border-color: var(--dark);
+  }
+
+  .month-display {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 90px;
+    text-align: center;
+  }
+
+  .toggle-wrap { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="brand">Lazy S Ranch</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
+    <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Harvest Calendar</div>
+    <div class="nav-tab disabled">Financials</div>
+    <div class="nav-tab disabled">Chemicals &amp; Fertilizer</div>
+    <div class="nav-tab disabled">Maps</div>
+  </div>
+  <button class="menu-btn" onclick="toggleMobile()">☰</button>
+</div>
+
+<div class="mobile-menu" id="mobile-menu">
+  <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
+  <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Harvest Calendar</div>
+  <div class="mobile-menu-item disabled">Financials</div>
+  <div class="mobile-menu-item disabled">Chemicals &amp; Fertilizer</div>
+  <div class="mobile-menu-item disabled">Maps</div>
+</div>
+
+<div class="content">
+
+  <!-- PACKOUT SECTION -->
+  <div id="packout-section" class="section active">
+    <div class="page-title">Packout Data</div>
+    <div class="filter-bar">
+      <span class="filter-label">Crop Year</span>
+      <select id="year-filter-packout" onchange="filterPackout()"></select>
+      <span class="filter-label" style="margin-left:8px">Block</span>
+      <select id="block-filter-packout" onchange="filterPackout()"></select>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+        <span class="filter-label">Show:</span>
+        <button class="col-toggle-btn" id="btn-harvest-cols" onclick="toggleHarvestCols()"><span class="btn-dot"></span>Harvest Check</button>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot fancy"></div> Fancy</div>
+      <div class="legend-item"><div class="legend-dot choice"></div> Choice</div>
+      <div class="legend-item"><div class="legend-dot other"></div> Other</div>
+      <div class="legend-item"><div class="legend-dot waste"></div> Waste</div>
+      <div class="legend-item"><div class="legend-dot juice"></div> Juice</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col><!-- Block -->
+          <col><!-- Variety -->
+          <col><!-- Bins Packouts -->
+          <col id="col-harvest"><!-- Bins Harvests -->
+          <col id="col-match"><!-- Match -->
+          <col><!-- Grade Distribution -->
+          <col><!-- RMA Progress -->
+        </colgroup>
+        <thead id="packout-head"></thead>
+        <tbody id="packout-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HARVEST SECTION -->
+  <div id="harvest-section" class="section">
+    <div class="page-title">Harvest Calendar</div>
+    <div class="filter-bar">
+      <span class="filter-label">Year</span>
+      <select id="year-filter-cal" onchange="updateCalendar()"></select>
+      <div class="month-nav">
+        <button class="month-arrow" onclick="shiftMonth(-1)">&#8592;</button>
+        <span id="month-label" class="month-display"></span>
+        <button class="month-arrow" onclick="shiftMonth(1)">&#8594;</button>
+      </div>
+    </div>
+    <div id="cal-content"></div>
+  </div>
+
+  <!-- COMING SOON -->
+  <div id="financials-section" class="section">
+    <div class="coming-soon"><div class="coming-soon-icon">💰</div><div class="coming-soon-label">Financials</div><p>Coming Soon</p></div>
+  </div>
+  <div id="chemicals-section" class="section">
+    <div class="coming-soon"><div class="coming-soon-icon">🧪</div><div class="coming-soon-label">Chemicals &amp; Fertilizer</div><p>Coming Soon</p></div>
+  </div>
+  <div id="maps-section" class="section">
+    <div class="coming-soon"><div class="coming-soon-icon">🗺️</div><div class="coming-soon-label">Maps</div><p>Coming Soon</p></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA (loaded from Excel at runtime) ──────────────────────────────────────
+
+let harvestData = [];
+let packoutData = [];
+
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const BLOCK_ORDER = ['1','2A','2B','3','4','5','6','7','8','9','10','11','12','13W','14W','15','16L','17','18W','19C'];
+const BLOCK_ALIASES = { '13': '13W', '14': '14W', '16': '16L', '18': '18W', '19': '19C' };
+
+let currentSort = { col: null, dir: null };
+let currentMonth = new Date().getMonth();
+
+function shiftMonth(dir) {
+  const yearSel = document.getElementById('year-filter-cal');
+  let year = parseInt(yearSel.value);
+  currentMonth += dir;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    // advance year if next year is available
+    const opts = [...yearSel.options].map(o => parseInt(o.value)).sort();
+    const nextYear = opts.find(y => y > year);
+    if (nextYear) yearSel.value = nextYear;
+  } else if (currentMonth < 0) {
+    currentMonth = 11;
+    // go back a year if previous year is available
+    const opts = [...yearSel.options].map(o => parseInt(o.value)).sort().reverse();
+    const prevYear = opts.find(y => y < year);
+    if (prevYear) yearSel.value = prevYear;
+  }
+  updateCalendar();
+}
+
+// ── NORMALIZE BLOCK IDs ──────────────────────────────────────────────────────
+
+function normBlock(b) { const s = String(b).toUpperCase().trim(); return BLOCK_ALIASES[s] || s; }
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-section').classList.add('active');
+
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.mobile-menu-item').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  if (name === 'harvest') updateCalendar();
+  if (name === 'packout') filterPackout();
+}
+
+function toggleMobile() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+}
+
+// ── YEAR TYPE HELPERS ─────────────────────────────────────────────────────────
+
+// Returns the crop year start for a YYYY-MM-DD string.
+// Oct–Dec → that calendar year; Jan–Sep → previous calendar year.
+function cropYearOf(dateStr) {
+  const [y, m] = dateStr.split('-').map(Number);
+  return m >= 10 ? y : y - 1;
+}
+
+// Label shown in the dropdown: "2025–26"
+function cropYearLabel(startYear) {
+  return startYear + '–' + String(startYear + 1).slice(-2);
+}
+
+function populateYearFilter() {
+  const years = [...new Set(packoutData.map(d => cropYearOf(d['Fruit Packed On'])))].sort().reverse();
+  const ypo = document.getElementById('year-filter-packout');
+  const prev = ypo.value;
+  ypo.innerHTML = '<option value="all">All Years</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = cropYearLabel(y);
+    ypo.appendChild(o);
+  });
+  if ([...ypo.options].some(o => o.value === prev)) ypo.value = prev;
+}
+
+// ── INIT FILTERS ─────────────────────────────────────────────────────────────
+
+function initFilters() {
+  // Years from packout data (delegates to populateYearFilter for fiscal/crop logic)
+  populateYearFilter();
+
+  // Default to most recent year
+  const ypo = document.getElementById('year-filter-packout');
+  if (ypo.options.length > 1) ypo.selectedIndex = 1;
+
+  // Years from harvest data for calendar — exclude 2024
+  const hYears = [...new Set(harvestData.map(d => new Date(d.Date).getFullYear()))].filter(y => y !== 2024).sort().reverse();
+  const yc = document.getElementById('year-filter-cal');
+  yc.innerHTML = '';
+  hYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yc.appendChild(o); });
+  if (hYears.length) yc.value = hYears[0];
+
+  // Blocks from packout
+  const blocks = [...new Set(packoutData.map(d => normBlock(d['Block ID'])))].sort((a,b) => {
+    const ai = BLOCK_ORDER.indexOf(a), bi = BLOCK_ORDER.indexOf(b);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+  const bp = document.getElementById('block-filter-packout');
+  bp.innerHTML = '<option value="all">All Blocks</option>';
+  blocks.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = 'Block ' + b; bp.appendChild(o); });
+}
+
+// ── GRADE BAR ────────────────────────────────────────────────────────────────
+
+function gradeBar(fancy, fPct, choice, cPct, other, oPct, waste, wPct, juice, jPct) {
+  const total = fancy + choice + other + waste + juice;
+  if (!total) return '<span style="color:#ccc;font-size:11px">—</span>';
+  const segs = [
+    { cls: 'fancy',  v: fancy,  pct: fPct * 100 },
+    { cls: 'choice', v: choice, pct: cPct * 100 },
+    { cls: 'other',  v: other,  pct: oPct * 100 },
+    { cls: 'waste',  v: waste,  pct: wPct * 100 },
+    { cls: 'juice',  v: juice,  pct: jPct * 100 },
+  ];
+  return '<div class="grade-bar">' + segs.map(s => {
+    if (!s.v) return '';
+    const label = s.pct >= 10 ? s.pct.toFixed(1) + '%' : '';
+    return `<div class="grade-seg ${s.cls}" style="width:${s.pct}%" title="${s.cls}: ${s.v.toLocaleString()} (${s.pct.toFixed(1)}%)">${label}</div>`;
+  }).join('') + '</div>';
+}
+
+// ── PACKOUT SECTION ───────────────────────────────────────────────────────────
+
+// ── RMA YIELD & BLOCK CONFIG ─────────────────────────────────────────────────
+
+// RMA 2026 Expected Area Yield (ctn/acre) by commodity type
+const RMA_YIELD_CTN = {
+  'CLEMENTINE':    864,  // Early Season M/T
+  'TANGO':         864,  // Late Season M/T
+  'TANGOS':        864,
+  'MURCOTT':       864,  // Late Season M/T
+  'MURCOTTS':      864,
+  'MANDARIN':      864,
+  'MANDARINS':     864,
+  'WASHINGTON':    531,  // Navel
+  'NAVEL':         531,
+  'VALENCIA':      531,
+  'LATE LANE':     531,
+  'POWELLS':       531,
+  'CARA-CARA':     531,  // Cara Cara
+  'CARA CARA':     531,
+  'GRAPEFRUIT':    929,
+  'LEMON':         674,
+  'LEMONS':        674,
+};
+
+// Block configuration: acres, packhouse, packhouse ctn-to-bin, packhouse lb/ctn, RMA lb/ctn
+const BLOCK_CONFIG = {
+  '1':   { commodity: 'CLEMENTINE', packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
+  '2A':  { commodity: 'TANGOS',     packhouse: 'Sun Pacific', acres: 10,    ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
+  '2B':  { commodity: 'CLEMENTINE', packhouse: 'Sun Pacific', acres: 10,    ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
+  '3':   { commodity: 'WASHINGTON', packhouse: 'Jireh',       acres: 20,    ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '4':   { commodity: 'VALENCIA',   packhouse: 'Jireh',       acres: 20,    ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '5':   { commodity: 'VALENCIA',   packhouse: 'Jireh',       acres: 5,     ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '6':   { commodity: 'VALENCIA',   packhouse: 'Jireh',       acres: 8,     ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '7':   { commodity: 'VALENCIA',   packhouse: 'Jireh',       acres: 24,    ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '8':   { commodity: 'LATE LANE',  packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+  '9':   { commodity: 'CARA-CARA',  packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+  '10':  { commodity: 'POWELLS',    packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+  '11':  { commodity: 'TANGOS',     packhouse: 'Sun Pacific', acres: 17.5,  ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
+  '12':  { commodity: 'LEMONS',     packhouse: 'Sun Pacific', acres: 18,    ctnToBin: 22.0,  phLb: 40, rmaLb: 40 },
+  '13W': { commodity: 'WASHINGTON', packhouse: 'Sun Pacific', acres: 5.5,   ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+  '14W': { commodity: 'WASHINGTON', packhouse: 'Jireh',       acres: 10.39, ctnToBin: 23.2,  phLb: 40, rmaLb: 38 },
+  '15':  { commodity: 'GRAPEFRUIT', packhouse: 'Jireh',       acres: 9.57,  ctnToBin: 23.2,  phLb: 35, rmaLb: 32 },
+  '16L': { commodity: 'LEMONS',     packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 22.0,  phLb: 40, rmaLb: 40 },
+  '17':  { commodity: 'TANGOS',     packhouse: 'Sun Pacific', acres: 10.68, ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
+  '18W': { commodity: 'WASHINGTON', packhouse: 'Sun Pacific', acres: 39.67, ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+  '19C': { commodity: 'CARA-CARA',  packhouse: 'Sun Pacific', acres: 11.54, ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
+};
+
+// Blocks fully picked by crop year (key = crop year start, value = set of block IDs)
+const FULLY_PICKED = {
+  2025: new Set(['13W','14W','18W','19C','1','2B','16L']),
+};
+function rmaEstimatedBins(block) {
+  const cfg = BLOCK_CONFIG[block];
+  if (!cfg) return null;
+  const ctnPerAcre = RMA_YIELD_CTN[cfg.commodity.toUpperCase()] || null;
+  if (!ctnPerAcre) return null;
+  // Convert RMA cartons → packhouse cartons → bins
+  // Estimated Bins = Acres × RMA Yield × (RMA Lb/Ctn ÷ Packhouse Lb/Ctn) ÷ Packhouse CTN-to-Bin
+  return (cfg.acres * ctnPerAcre * (cfg.rmaLb / cfg.phLb)) / cfg.ctnToBin;
+}
+
+function progressBar(packedBins, estimatedBins) {
+  if (estimatedBins === null || estimatedBins <= 0) return '<span style="color:var(--text-light);font-size:11px">—</span>';
+  const pct = Math.min((packedBins / estimatedBins) * 100, 100);
+  const over = packedBins > estimatedBins;
+  const color = over ? '#c62828' : pct >= 75 ? '#2e7d32' : pct >= 40 ? '#f57f17' : '#1565c0';
+  const label = `${packedBins.toFixed(1)} / ${estimatedBins.toFixed(1)} bins (${((packedBins/estimatedBins)*100).toFixed(1)}%)`;
+  return `<div style="min-width:120px">
+    <div style="background:#e0e0e0;border-radius:4px;height:10px;overflow:hidden;margin-bottom:3px">
+      <div style="width:${pct}%;background:${color};height:100%;border-radius:4px;transition:width 0.3s"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text-light);white-space:nowrap">${label}</div>
+  </div>`;
+}
+
+let harvestColsVisible = false;
+
+function toggleHarvestCols() {
+  harvestColsVisible = !harvestColsVisible;
+  const colH = document.getElementById('col-harvest');
+  const colM = document.getElementById('col-match');
+  const btn  = document.getElementById('btn-harvest-cols');
+  if (harvestColsVisible) {
+    colH.classList.remove('col-hidden');
+    colM.classList.remove('col-hidden');
+    btn.classList.add('active');
+  } else {
+    colH.classList.add('col-hidden');
+    colM.classList.add('col-hidden');
+    btn.classList.remove('active');
+  }
+  // Also toggle the td cells in every row
+  document.querySelectorAll('.harvest-col').forEach(td => {
+    td.style.display = harvestColsVisible ? '' : 'none';
+  });
+}
+
+function filterPackout() {
+  const yearF = document.getElementById('year-filter-packout').value;
+  const blockF = document.getElementById('block-filter-packout').value;
+
+  let filtered = packoutData.filter(d => {
+    const y = cropYearOf(d['Fruit Packed On']);
+    const b = normBlock(d['Block ID']);
+    return (yearF === 'all' || y == yearF) && (blockF === 'all' || b === blockF);
+  });
+
+  // Group by block
+  const grouped = {};
+  BLOCK_ORDER.forEach(b => { grouped[b] = { block: b, variety: '', records: [], totFB: 0, totBins: 0, totFancy: 0, totChoice: 0, totOther: 0, totWaste: 0, totJuice: 0, wFancy: 0, wChoice: 0, wOther: 0, wWaste: 0, wJuice: 0 }; });
+
+  filtered.forEach(d => {
+    const b = normBlock(d['Block ID']);
+    if (!grouped[b]) grouped[b] = { block: b, variety: '', records: [], totFB: 0, totBins: 0, totFancy: 0, totChoice: 0, totOther: 0, totWaste: 0, totJuice: 0, wFancy: 0, wChoice: 0, wOther: 0, wWaste: 0, wJuice: 0 };
+    const g = grouped[b];
+    if (!g.variety) g.variety = d.Variety;
+    g.records.push(d);
+    const fb = d['Field Box (Processed This Date)'] || 0;
+    g.totFB   += fb;
+    g.totBins += d['Total Bins'] || 0;
+    g.totFancy  += d['Total Fancy']  || 0;
+    g.totChoice += d['Total Choice'] || 0;
+    g.totOther  += d['Total Other']  || 0;
+    g.totWaste  += d['Total Waste']  || 0;
+    g.totJuice  += d['Total Juice']  || 0;
+    g.wFancy  += (d['Total Fancy PkOut%']  || 0) * fb;
+    g.wChoice += (d['Total Choice PkOut%'] || 0) * fb;
+    g.wOther  += (d['Total Other PkOut%']  || 0) * fb;
+    g.wWaste  += (d['Total Waste PkOut%']  || 0) * fb;
+    g.wJuice  += (d['Total Juice PkOut%']  || 0) * fb;
+  });
+
+  let rows = BLOCK_ORDER.map(b => grouped[b]).filter(g => g);
+
+  // Sort each block's detail records by date earliest to latest
+  rows.forEach(g => {
+    g.records.sort((a, b) => a['Fruit Packed On'].localeCompare(b['Fruit Packed On']));
+  });
+
+  // Sorting
+  if (currentSort.col) {
+    rows.sort((a, b) => {
+      let av, bv;
+      if (currentSort.col === 'block') { av = BLOCK_ORDER.indexOf(a.block); bv = BLOCK_ORDER.indexOf(b.block); }
+      else if (currentSort.col === 'variety') { av = a.variety; bv = b.variety; }
+      else if (currentSort.col === 'qty') { av = a.totBins; bv = b.totBins; }
+      else { av = 0; bv = 0; }
+      if (av === bv) return 0;
+      const cmp = (typeof av === 'string') ? av.localeCompare(bv) : av - bv;
+      return currentSort.dir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  const sortClass = c => c === currentSort.col ? 'sort-' + currentSort.dir : '';
+
+  // Build harvest totals by block for the same year filter
+  const harvestByBlock = {};
+  harvestData.forEach(d => {
+    const hy = cropYearOf(d.Date);
+    if (yearF !== 'all' && hy != yearF) return;
+    const b = normBlock(String(d.Block));
+    if (!harvestByBlock[b]) harvestByBlock[b] = { fb: 0, bins: 0 };
+    harvestByBlock[b].fb   += d.FB   || 0;
+    harvestByBlock[b].bins += d.Bins || 0;
+  });
+
+  document.getElementById('packout-head').innerHTML = `<tr>
+    <th class="${sortClass('block')}" onclick="doSort('block')">Block</th>
+    <th class="${sortClass('variety')}" onclick="doSort('variety')">Variety</th>
+    <th class="${sortClass('qty')}" onclick="doSort('qty')">Bins (Packouts)</th>
+    <th class="harvest-col" style="display:${harvestColsVisible?'':'none'}">Bins (Harvests)</th>
+    <th class="harvest-col" style="display:${harvestColsVisible?'':'none'};text-align:center">Match</th>
+    <th>Grade Distribution</th>
+    <th>RMA Yield Progress <button onclick="event.stopPropagation();showRmaModal()" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:none;color:rgba(255,255,255,0.85);font-size:10px;font-weight:700;cursor:pointer;padding:0;line-height:1;vertical-align:middle;margin-left:4px" title="View RMA yield data source">?</button></th>
+  </tr>`;
+
+  // Build body
+  let html = '';
+  rows.forEach(g => {
+    const bid = g.block.replace(/[^a-zA-Z0-9]/g,'_');
+    const hData = harvestByBlock[g.block] || null;
+
+    if (!g.records.length) {
+      html += `<tr class="row-empty"><td>Block ${g.block}</td><td>—</td><td>—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td>—</td><td>—</td></tr>`;
+      return;
+    }
+
+    const pQty    = g.totBins;
+    const hQty    = hData ? hData.bins : null;
+    const pQtyFmt = pQty.toFixed(1);
+    const hQtyFmt = hData ? hQty.toFixed(1) : '<span style="color:var(--text-light)">—</span>';
+
+    const match = hData !== null && Math.abs(pQty - hQty) < 0.01;
+    const matchIcon = hData === null
+      ? '<span title="No harvest data for this block" style="color:var(--text-light);font-size:15px">—</span>'
+      : match
+        ? '<span title="Packout and harvest totals match" style="color:#2e7d32;font-size:16px">✔</span>'
+        : `<span title="Packout: ${pQtyFmt} | Harvest: ${hQtyFmt}" style="color:#c62828;font-size:16px">✘</span>`;
+
+    const estBins = rmaEstimatedBins(g.block);
+    const pickedYear = parseInt(yearF) || null;
+    const isFullyPicked = pickedYear && FULLY_PICKED[pickedYear] && FULLY_PICKED[pickedYear].has(g.block);
+    const pickedBadge = isFullyPicked ? '<span class="picked-badge">✔ Fully Picked</span>' : '';
+    const multi = g.records.length > 1;
+    html += `<tr class="row-group" onclick="toggleBlock('${bid}')">
+      <td>${multi ? `<span class="expand-icon" id="icon-${bid}">▶</span>` : ''}Block ${g.block}${multi ? ` <span style="color:var(--text-light);font-weight:400;font-size:11px">(${g.records.length})</span>` : ''}${pickedBadge}</td>
+      <td>${g.variety}</td>
+      <td>${pQtyFmt}</td>
+      <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">${hQtyFmt}</td>
+      <td class="harvest-col" style="display:${harvestColsVisible?'':'none'};text-align:center">${matchIcon}</td>
+      <td>${gradeBar(g.totFancy, g.totFB ? g.wFancy/g.totFB : 0, g.totChoice, g.totFB ? g.wChoice/g.totFB : 0, g.totOther, g.totFB ? g.wOther/g.totFB : 0, g.totWaste, g.totFB ? g.wWaste/g.totFB : 0, g.totJuice, g.totFB ? g.wJuice/g.totFB : 0)}</td>
+      <td>${progressBar(g.totBins, estBins)}</td>
+    </tr>`;
+    if (multi) {
+      g.records.forEach(r => {
+        const [ry,rm,rd] = r['Fruit Packed On'].split('-').map(Number);
+        const rDate = new Date(ry, rm-1, rd).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        const rQty = (r['Total Bins']||0).toFixed(1);
+        html += `<tr class="row-detail detail-${bid}">
+          <td style="padding-left:26px">${rDate}</td>
+          <td>${r.Variety}</td>
+          <td>${rQty}</td>
+          <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}"></td>
+          <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}"></td>
+          <td>${gradeBar(r['Total Fancy']||0, r['Total Fancy PkOut%']||0, r['Total Choice']||0, r['Total Choice PkOut%']||0, r['Total Other']||0, r['Total Other PkOut%']||0, r['Total Waste']||0, r['Total Waste PkOut%']||0, r['Total Juice']||0, r['Total Juice PkOut%']||0)}</td>
+          <td></td>
+        </tr>`;
+      });
+    }
+  });
+
+  document.getElementById('packout-body').innerHTML = html;
+}
+
+function doSort(col) {
+  if (currentSort.col === col) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+  else { currentSort.col = col; currentSort.dir = 'asc'; }
+  filterPackout();
+}
+
+function toggleBlock(bid) {
+  document.querySelectorAll('.detail-' + bid).forEach(r => r.classList.toggle('visible'));
+  const icon = document.getElementById('icon-' + bid);
+  if (icon) icon.classList.toggle('expanded');
+}
+
+// ── HARVEST CALENDAR ─────────────────────────────────────────────────────────
+
+function updateCalendar() {
+  const year  = parseInt(document.getElementById('year-filter-cal').value);
+  const month = currentMonth;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('month-label').textContent = MONTHS[month];
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Build day map
+  const byDay = {};
+  harvestData.forEach(d => {
+    const [dy, dm, dd] = d.Date.split('-').map(Number);
+    if (dy === year && (dm - 1) === month) {
+      if (!byDay[dd]) byDay[dd] = [];
+      byDay[dd].push(d);
+    }
+  });
+
+  let html = '<div class="cal-grid">';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+    html += `<div class="cal-cell header">${d}</div>`;
+  });
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const entries = byDay[day];
+    if (entries) {
+      // Group by variety
+      const varMap = {};
+      let totalFB = 0;
+      entries.forEach(e => {
+        const v = e.Variety;
+        varMap[v] = (varMap[v] || 0) + (e.FB || 0);
+        totalFB += (e.FB || 0);
+      });
+      const pills = Object.entries(varMap).map(([v, fb]) => {
+        const cls = v.replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
+        return `<span class="cal-pill ${cls}">${v.replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT')}</span>`;
+      }).join('');
+      html += `<div class="cal-cell has-data" onclick="showDayDetail(${day},${month},${year})">
+        <div class="cal-day-num">${day}</div>
+        <div>${pills}</div>
+        <div class="cal-fb">${totalFB.toLocaleString()} FB</div>
+      </div>`;
+    } else {
+      html += `<div class="cal-cell"><div class="cal-day-num">${day}</div></div>`;
+    }
+  }
+
+  html += '</div>';
+  document.getElementById('cal-content').innerHTML = html;
+}
+
+function showDayDetail(day, month, year) {
+  const entries = harvestData.filter(d => {
+    const [dy, dm, dd] = d.Date.split('-').map(Number);
+    return dd === day && (dm - 1) === month && dy === year;
+  });
+
+  const dt = new Date(year, month, day);
+  const label = dt.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  let html = `<div class="modal-title">Harvest — ${label}</div>`;
+  html += '<table class="modal-table"><thead><tr><th>Block</th><th>Variety</th><th>Bins</th><th>Field Boxes</th></tr></thead><tbody>';
+  entries.forEach(e => {
+    html += `<tr><td>Block ${e.Block}</td><td>${e.Variety}</td><td>${e.Bins}</td><td>${(e.FB||0).toLocaleString()}</td></tr>`;
+  });
+  const totalBins = entries.reduce((s,e) => s + (e.Bins||0), 0);
+  const totalFB   = entries.reduce((s,e) => s + (e.FB||0), 0);
+  html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td>${totalBins.toFixed(1)}</td><td>${totalFB.toLocaleString()}</td></tr>`;
+  html += '</tbody></table>';
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function showRmaModal() {
+  const html = `
+    <div class="modal-title">RMA Yield Progress — Data Source</div>
+    <p style="font-size:12px;color:var(--text-light);margin:0 0 12px">
+      Yield estimates come from the USDA Risk Management Agency (RMA) 2026 Actuarial Data Master (ADM),
+      Tulare County, California. Expected area yield is expressed in cartons (ctn) per acre and converted
+      to bins using the block-specific conversion factors below.
+      <br><br>
+      <strong>Formula:</strong> Estimated Bins = Acres × Expected Area Yield (ctn/acre) ÷ CTN-to-Bin Conversion
+    </p>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">RMA 2026 Commodity Yields</div>
+    <table class="modal-table" style="margin-bottom:18px">
+      <thead><tr>
+        <th>Commodity Type</th>
+        <th>Expected Area Yield (ctn/acre)</th>
+        <th>Established Price ($/ctn)</th>
+        <th>Revenue/Acre</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Early Season M/T (Clementine)</td><td>864</td><td>$15.70</td><td>$13,564.80</td></tr>
+        <tr><td>Late Season M/T (Tango, Murcott)</td><td>864</td><td>$16.40</td><td>$14,169.60</td></tr>
+        <tr><td>Valencia</td><td>531</td><td>$10.20</td><td>$5,416.20</td></tr>
+        <tr><td>Navel (Washington, Late Lane, Powells)</td><td>531</td><td>$10.80</td><td>$5,734.80</td></tr>
+        <tr><td>Cara Cara</td><td>531</td><td>$14.05</td><td>$7,460.55</td></tr>
+        <tr><td>Grapefruit</td><td>929</td><td>$8.05</td><td>$7,478.45</td></tr>
+        <tr><td>Lemon</td><td>674</td><td>$11.05</td><td>$7,447.70</td></tr>
+      </tbody>
+    </table>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Block Configuration</div>
+    <table class="modal-table">
+      <thead><tr>
+        <th>Block</th>
+        <th>Commodity</th>
+        <th>Pack House</th>
+        <th>Acres</th>
+        <th>PH CTN-to-Bin</th>
+        <th>PH Lb/CTN</th>
+        <th>RMA Lb/CTN</th>
+        <th>Est. Bins (2026)</th>
+      </tr></thead>
+      <tbody>
+        ${Object.entries(BLOCK_CONFIG).map(([blk, cfg]) => {
+          const ctnPerAcre = RMA_YIELD_CTN[cfg.commodity.toUpperCase()];
+          const estBins = ctnPerAcre ? (cfg.acres * ctnPerAcre * (cfg.rmaLb / cfg.phLb) / cfg.ctnToBin).toFixed(1) : '—';
+          return `<tr>
+            <td>Block ${blk}</td>
+            <td>${cfg.commodity.charAt(0).toUpperCase() + cfg.commodity.slice(1).toLowerCase()}</td>
+            <td>${cfg.packhouse}</td>
+            <td>${cfg.acres}</td>
+            <td>${cfg.ctnToBin}</td>
+            <td>${cfg.phLb}</td>
+            <td>${cfg.rmaLb}</td>
+            <td>${estBins}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:var(--text-light);margin:10px 0 0">
+      Source: USDA RMA Actuarial Data Master, 2026 Reinsurance Year — 
+      <a href="https://pubfs-rma.fpac.usda.gov/pub/References/actuarial_data_master/2025/index.html" 
+         target="_blank" style="color:var(--mid)">pubfs-rma.fpac.usda.gov</a>
+    </p>`;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+// ── EXCEL PARSING ────────────────────────────────────────────────────────────
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = '#d5cfc5';
+  document.getElementById('drop-zone').style.background = '#fff';
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  const statusEl = document.getElementById('upload-status-manual') || document.getElementById('upload-status');
+  if (!file || !file.name.endsWith('.xlsx')) {
+    if (statusEl) statusEl.textContent = 'Please select a .xlsx file.';
+    return;
+  }
+  if (statusEl) statusEl.textContent = 'Reading ' + file.name + '…';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      parseWorkbook(wb);
+      document.getElementById('upload-overlay').style.display = 'none';
+    } catch(err) {
+      if (statusEl) statusEl.textContent = 'Error reading file: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function excelDateToStr(val) {
+  // SheetJS with cellDates:true returns JS Date objects at midnight UTC — always use UTC methods
+  if (val instanceof Date) {
+    const y = val.getUTCFullYear();
+    const m = String(val.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(val.getUTCDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+  // Fallback: numeric serial
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(d.getUTCDate()).padStart(2, '0');
+    return y + '-' + mo + '-' + dy;
+  }
+  return String(val);
+}
+
+function parseWorkbook(wb) {
+  // ── Harvest Reports ──
+  const hws = wb.Sheets['Harvest Reports'];
+  const hRows = XLSX.utils.sheet_to_json(hws, { raw: true, defval: null });
+  harvestData = hRows
+    .filter(r => r['Date'] && r['Variety'])
+    .map(r => {
+      // sheet_to_json with raw:false gives date strings, but parse carefully
+      let dateStr = r['Date'];
+      // If it came back as a JS Date (cellDates mode), convert it
+      if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
+      // If it's a numeric serial somehow, convert
+      if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
+      // Normalize MM/DD/YYYY or other formats to YYYY-MM-DD
+      if (typeof dateStr === 'string' && dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const [mo, dy, yr] = parts;
+          dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+        }
+      }
+      return {
+        Date:    dateStr,
+        Ticket:  r['Ticket'],
+        Block:   r['Block'],
+        Variety: (r['Variety'] || '').toUpperCase().trim(),
+        Bins:    parseFloat(r['Bins']) || 0,
+        FB:      parseFloat(r['FB'])   || 0,
+      };
+    });
+
+  // ── Packouts ──
+  const pws = wb.Sheets['Packouts'];
+  const pRows = XLSX.utils.sheet_to_json(pws, { raw: true, defval: null });
+  packoutData = pRows
+    .filter(r => r['Variety'] && r['Block ID'] != null)
+    .map(r => {
+      let dateStr = r['Fruit Packed On'];
+      if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
+      if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
+      if (typeof dateStr === 'string' && dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const [mo, dy, yr] = parts;
+          dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+        }
+      }
+      return {
+        'Variety':                        (r['Variety'] || '').toUpperCase().trim(),
+        'Fruit Packed On':                dateStr,
+        'Block ID':                       String(r['Block ID']).toUpperCase().trim(),
+        'Field Box (Processed This Date)':parseFloat(r['Field Box (Processed This Date)']) || 0,
+        'Total Bins':                     parseFloat(r['Total Bins'])    || 0,
+        'Total Fancy':                    parseFloat(r['Total Fancy'])   || 0,
+        'Total Fancy PkOut%':             parseFloat(r['Total Fancy PkOut%'])  || 0,
+        'Total Choice':                   parseFloat(r['Total Choice'])  || 0,
+        'Total Choice PkOut%':            parseFloat(r['Total Choice PkOut%']) || 0,
+        'Total Other':                    parseFloat(r['Total Other'])   || 0,
+        'Total Other PkOut%':             parseFloat(r['Total Other PkOut%'])  || 0,
+        'Total Waste':                    parseFloat(r['Total Waste'])   || 0,
+        'Total Waste PkOut%':             parseFloat(r['Total Waste PkOut%'])  || 0,
+        'Total Juice':                    parseFloat(r['Total Juice'])   || 0,
+        'Total Juice PkOut%':             parseFloat(r['Total Juice PkOut%'])  || 0,
+      };
+    });
+
+  // Boot the dashboard
+  initFilters();
+  // Harvest check columns hidden by default
+  document.getElementById('col-harvest').classList.add('col-hidden');
+  document.getElementById('col-match').classList.add('col-hidden');
+
+  const now = new Date();
+  const ypo = document.getElementById('year-filter-packout');
+  const curYearOpt = [...ypo.options].find(o => parseInt(o.value) === now.getFullYear());
+  if (curYearOpt) ypo.value = now.getFullYear();
+
+  filterPackout();
+
+  const calYear = document.getElementById('year-filter-cal');
+  if ([...calYear.options].some(o => parseInt(o.value) === now.getFullYear())) {
+    calYear.value = now.getFullYear();
+  }
+  currentMonth = now.getMonth();
+  updateCalendar();
+}
+</script>
+
+<!-- LOADING / UPLOAD OVERLAY -->
+<div id="upload-overlay" style="
+  position:fixed;inset:0;background:rgba(26,46,28,0.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;font-family:'Jost',sans-serif;
+">
+  <div style="
+    background:#f2ede6;border-radius:12px;padding:48px 56px;
+    text-align:center;max-width:420px;width:90%;
+    box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  ">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#1a2e1c;margin-bottom:6px;">
+      Lazy S Ranch
+    </div>
+    <div style="font-size:13px;color:#6b7d6c;margin-bottom:32px;letter-spacing:0.04em;">
+      DASHBOARD
+    </div>
+
+    <!-- Auto-load state (shown while fetching) -->
+    <div id="auto-load-ui">
+      <div style="font-size:32px;margin-bottom:16px;">🌿</div>
+      <div style="font-size:14px;font-weight:500;color:#2a3a2c;margin-bottom:8px;">Loading data…</div>
+      <div id="upload-status" style="font-size:13px;color:#6b7d6c;min-height:20px;">Fetching Compiled_Report.xlsx</div>
+    </div>
+
+    <!-- Manual upload fallback (hidden until auto-fetch fails) -->
+    <div id="manual-upload-ui" style="display:none;">
+      <div id="drop-zone" style="
+        border:2px dashed #d5cfc5;border-radius:8px;padding:32px 24px;
+        cursor:pointer;transition:all 0.2s;background:#fff;margin-bottom:16px;
+      "
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#2c4a2e';this.style.background='#f0f5f0';"
+        ondragleave="this.style.borderColor='#d5cfc5';this.style.background='#fff';"
+        ondrop="handleDrop(event)"
+      >
+        <div style="font-size:32px;margin-bottom:12px;">📂</div>
+        <div style="font-size:14px;font-weight:500;color:#2a3a2c;margin-bottom:6px;">
+          Drop Compiled_Report.xlsx here
+        </div>
+        <div style="font-size:12px;color:#8a9e8c;">or click to browse</div>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx" style="display:none" onchange="handleFile(this.files[0])">
+      <div id="upload-status-manual" style="font-size:13px;color:#6b7d6c;min-height:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── AUTO-FETCH on page load ───────────────────────────────────────────────────
+// Tries to fetch Compiled_Report.xlsx from the same directory as this HTML file.
+// Works for GitHub Pages, any static host, or local file server.
+// Falls back to the manual drag-and-drop UI if the fetch fails.
+
+(function autoLoad() {
+  // Resolve the URL relative to this page (works for gh-pages and local servers)
+  const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
+
+  fetch(xlsxUrl)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + res.statusText);
+      return res.arrayBuffer();
+    })
+    .then(function(buffer) {
+      try {
+        const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
+        parseWorkbook(wb);
+        document.getElementById('upload-overlay').style.display = 'none';
+      } catch(err) {
+        showManualUpload('Could not parse file: ' + err.message);
+      }
+    })
+    .catch(function(err) {
+      // File not reachable (local file://, missing file, etc.) — show manual UI
+      showManualUpload('Could not auto-load file. Please upload manually.');
+    });
+
+  function showManualUpload(msg) {
+    document.getElementById('auto-load-ui').style.display = 'none';
+    document.getElementById('manual-upload-ui').style.display = 'block';
+    if (msg) document.getElementById('upload-status-manual').textContent = msg;
+  }
+})();
+</script>
+
+</body>
+</html>
