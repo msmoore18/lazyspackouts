@@ -395,6 +395,8 @@
   .col-toggle-btn:hover { border-color: var(--mid); color: var(--text); }
   .col-toggle-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
   .col-toggle-btn .btn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+
+  .expand-icon {
     display: inline-block;
     font-size: 9px;
     transition: transform 0.2s;
@@ -748,13 +750,11 @@ function shiftMonth(dir) {
   currentMonth += dir;
   if (currentMonth > 11) {
     currentMonth = 0;
-    // advance year if next year is available
     const opts = [...yearSel.options].map(o => parseInt(o.value)).sort();
     const nextYear = opts.find(y => y > year);
     if (nextYear) yearSel.value = nextYear;
   } else if (currentMonth < 0) {
     currentMonth = 11;
-    // go back a year if previous year is available
     const opts = [...yearSel.options].map(o => parseInt(o.value)).sort().reverse();
     const prevYear = opts.find(y => y < year);
     if (prevYear) yearSel.value = prevYear;
@@ -786,14 +786,11 @@ function toggleMobile() {
 
 // ── YEAR TYPE HELPERS ─────────────────────────────────────────────────────────
 
-// Returns the crop year start for a YYYY-MM-DD string.
-// Oct–Dec → that calendar year; Jan–Sep → previous calendar year.
 function cropYearOf(dateStr) {
   const [y, m] = dateStr.split('-').map(Number);
   return m >= 10 ? y : y - 1;
 }
 
-// Label shown in the dropdown: "2025–26"
 function cropYearLabel(startYear) {
   return startYear + '–' + String(startYear + 1).slice(-2);
 }
@@ -815,21 +812,17 @@ function populateYearFilter() {
 // ── INIT FILTERS ─────────────────────────────────────────────────────────────
 
 function initFilters() {
-  // Years from packout data (delegates to populateYearFilter for fiscal/crop logic)
   populateYearFilter();
 
-  // Default to most recent year
   const ypo = document.getElementById('year-filter-packout');
   if (ypo.options.length > 1) ypo.selectedIndex = 1;
 
-  // Years from harvest data for calendar — exclude 2024
   const hYears = [...new Set(harvestData.map(d => new Date(d.Date).getFullYear()))].filter(y => y !== 2024).sort().reverse();
   const yc = document.getElementById('year-filter-cal');
   yc.innerHTML = '';
   hYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yc.appendChild(o); });
   if (hYears.length) yc.value = hYears[0];
 
-  // Blocks from packout
   const blocks = [...new Set(packoutData.map(d => normBlock(d['Block ID'])))].sort((a,b) => {
     const ai = BLOCK_ORDER.indexOf(a), bi = BLOCK_ORDER.indexOf(b);
     return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
@@ -862,28 +855,26 @@ function gradeBar(fancy, fPct, choice, cPct, other, oPct, waste, wPct, juice, jP
 
 // ── RMA YIELD & BLOCK CONFIG ─────────────────────────────────────────────────
 
-// RMA 2026 Expected Area Yield (ctn/acre) by commodity type
 const RMA_YIELD_CTN = {
-  'CLEMENTINE':    864,  // Early Season M/T
-  'TANGO':         864,  // Late Season M/T
+  'CLEMENTINE':    864,
+  'TANGO':         864,
   'TANGOS':        864,
-  'MURCOTT':       864,  // Late Season M/T
+  'MURCOTT':       864,
   'MURCOTTS':      864,
   'MANDARIN':      864,
   'MANDARINS':     864,
-  'WASHINGTON':    531,  // Navel
+  'WASHINGTON':    531,
   'NAVEL':         531,
   'VALENCIA':      531,
   'LATE LANE':     531,
   'POWELLS':       531,
-  'CARA-CARA':     531,  // Cara Cara
+  'CARA-CARA':     531,
   'CARA CARA':     531,
   'GRAPEFRUIT':    929,
   'LEMON':         674,
   'LEMONS':        674,
 };
 
-// Block configuration: acres, packhouse, packhouse ctn-to-bin, packhouse lb/ctn, RMA lb/ctn
 const BLOCK_CONFIG = {
   '1':   { commodity: 'CLEMENTINE', packhouse: 'Sun Pacific', acres: 20,    ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
   '2A':  { commodity: 'TANGOS',     packhouse: 'Sun Pacific', acres: 10,    ctnToBin: 173.5, phLb: 5,  rmaLb: 25 },
@@ -907,17 +898,15 @@ const BLOCK_CONFIG = {
   '19C': { commodity: 'CARA-CARA',  packhouse: 'Sun Pacific', acres: 11.54, ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
 };
 
-// Blocks fully picked by crop year (key = crop year start, value = set of block IDs)
 const FULLY_PICKED = {
   2025: new Set(['13W','14W','18W','19C','1','2B','16L']),
 };
+
 function rmaEstimatedBins(block) {
   const cfg = BLOCK_CONFIG[block];
   if (!cfg) return null;
   const ctnPerAcre = RMA_YIELD_CTN[cfg.commodity.toUpperCase()] || null;
   if (!ctnPerAcre) return null;
-  // Convert RMA cartons → packhouse cartons → bins
-  // Estimated Bins = Acres × RMA Yield × (RMA Lb/Ctn ÷ Packhouse Lb/Ctn) ÷ Packhouse CTN-to-Bin
   return (cfg.acres * ctnPerAcre * (cfg.rmaLb / cfg.phLb)) / cfg.ctnToBin;
 }
 
@@ -951,7 +940,6 @@ function toggleHarvestCols() {
     colM.classList.add('col-hidden');
     btn.classList.remove('active');
   }
-  // Also toggle the td cells in every row
   document.querySelectorAll('.harvest-col').forEach(td => {
     td.style.display = harvestColsVisible ? '' : 'none';
   });
@@ -967,7 +955,6 @@ function filterPackout() {
     return (yearF === 'all' || y == yearF) && (blockF === 'all' || b === blockF);
   });
 
-  // Group by block
   const grouped = {};
   BLOCK_ORDER.forEach(b => { grouped[b] = { block: b, variety: '', records: [], totFB: 0, totBins: 0, totFancy: 0, totChoice: 0, totOther: 0, totWaste: 0, totJuice: 0, wFancy: 0, wChoice: 0, wOther: 0, wWaste: 0, wJuice: 0 }; });
 
@@ -994,12 +981,10 @@ function filterPackout() {
 
   let rows = BLOCK_ORDER.map(b => grouped[b]).filter(g => g);
 
-  // Sort each block's detail records by date earliest to latest
   rows.forEach(g => {
     g.records.sort((a, b) => a['Fruit Packed On'].localeCompare(b['Fruit Packed On']));
   });
 
-  // Sorting
   if (currentSort.col) {
     rows.sort((a, b) => {
       let av, bv;
@@ -1015,7 +1000,6 @@ function filterPackout() {
 
   const sortClass = c => c === currentSort.col ? 'sort-' + currentSort.dir : '';
 
-  // Build harvest totals by block for the same year filter
   const harvestByBlock = {};
   harvestData.forEach(d => {
     const hy = cropYearOf(d.Date);
@@ -1036,7 +1020,6 @@ function filterPackout() {
     <th>RMA Yield Progress <button onclick="event.stopPropagation();showRmaModal()" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:none;color:rgba(255,255,255,0.85);font-size:10px;font-weight:700;cursor:pointer;padding:0;line-height:1;vertical-align:middle;margin-left:4px" title="View RMA yield data source">?</button></th>
   </tr>`;
 
-  // Build body
   let html = '';
   rows.forEach(g => {
     const bid = g.block.replace(/[^a-zA-Z0-9]/g,'_');
@@ -1117,7 +1100,6 @@ function updateCalendar() {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Build day map
   const byDay = {};
   harvestData.forEach(d => {
     const [dy, dm, dd] = d.Date.split('-').map(Number);
@@ -1137,7 +1119,6 @@ function updateCalendar() {
   for (let day = 1; day <= daysInMonth; day++) {
     const entries = byDay[day];
     if (entries) {
-      // Group by variety
       const varMap = {};
       let totalFB = 0;
       entries.forEach(e => {
@@ -1260,8 +1241,6 @@ function closeModal(e) {
   }
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-
 // ── EXCEL PARSING ────────────────────────────────────────────────────────────
 
 function handleDrop(e) {
@@ -1293,14 +1272,12 @@ function handleFile(file) {
 }
 
 function excelDateToStr(val) {
-  // SheetJS with cellDates:true returns JS Date objects at midnight UTC — always use UTC methods
   if (val instanceof Date) {
     const y = val.getUTCFullYear();
     const m = String(val.getUTCMonth() + 1).padStart(2, '0');
     const d = String(val.getUTCDate()).padStart(2, '0');
     return y + '-' + m + '-' + d;
   }
-  // Fallback: numeric serial
   if (typeof val === 'number') {
     const d = new Date(Math.round((val - 25569) * 86400 * 1000));
     const y = d.getUTCFullYear();
@@ -1318,13 +1295,9 @@ function parseWorkbook(wb) {
   harvestData = hRows
     .filter(r => r['Date'] && r['Variety'])
     .map(r => {
-      // sheet_to_json with raw:false gives date strings, but parse carefully
       let dateStr = r['Date'];
-      // If it came back as a JS Date (cellDates mode), convert it
       if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
-      // If it's a numeric serial somehow, convert
       if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
-      // Normalize MM/DD/YYYY or other formats to YYYY-MM-DD
       if (typeof dateStr === 'string' && dateStr.includes('/')) {
         const parts = dateStr.split('/');
         if (parts.length === 3) {
@@ -1332,6 +1305,7 @@ function parseWorkbook(wb) {
           dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
         }
       }
+      dateStr = String(dateStr).slice(0, 10);
       return {
         Date:    dateStr,
         Ticket:  r['Ticket'],
@@ -1358,6 +1332,7 @@ function parseWorkbook(wb) {
           dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
         }
       }
+      dateStr = String(dateStr).slice(0, 10);
       return {
         'Variety':                        (r['Variety'] || '').toUpperCase().trim(),
         'Fruit Packed On':                dateStr,
@@ -1379,7 +1354,6 @@ function parseWorkbook(wb) {
 
   // Boot the dashboard
   initFilters();
-  // Harvest check columns hidden by default
   document.getElementById('col-harvest').classList.add('col-hidden');
   document.getElementById('col-match').classList.add('col-hidden');
 
@@ -1417,14 +1391,12 @@ function parseWorkbook(wb) {
       DASHBOARD
     </div>
 
-    <!-- Auto-load state (shown while fetching) -->
     <div id="auto-load-ui">
       <div style="font-size:32px;margin-bottom:16px;">🌿</div>
       <div style="font-size:14px;font-weight:500;color:#2a3a2c;margin-bottom:8px;">Loading data…</div>
       <div id="upload-status" style="font-size:13px;color:#6b7d6c;min-height:20px;">Fetching Compiled_Report.xlsx</div>
     </div>
 
-    <!-- Manual upload fallback (hidden until auto-fetch fails) -->
     <div id="manual-upload-ui" style="display:none;">
       <div id="drop-zone" style="
         border:2px dashed #d5cfc5;border-radius:8px;padding:32px 24px;
@@ -1448,13 +1420,7 @@ function parseWorkbook(wb) {
 </div>
 
 <script>
-// ── AUTO-FETCH on page load ───────────────────────────────────────────────────
-// Tries to fetch Compiled_Report.xlsx from the same directory as this HTML file.
-// Works for GitHub Pages, any static host, or local file server.
-// Falls back to the manual drag-and-drop UI if the fetch fails.
-
 (function autoLoad() {
-  // Resolve the URL relative to this page (works for gh-pages and local servers)
   const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
 
   fetch(xlsxUrl)
@@ -1472,7 +1438,6 @@ function parseWorkbook(wb) {
       }
     })
     .catch(function(err) {
-      // File not reachable (local file://, missing file, etc.) — show manual UI
       showManualUpload('Could not auto-load file. Please upload manually.');
     });
 
