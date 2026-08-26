@@ -1171,12 +1171,12 @@
       <select id="year-filter-packout" onchange="filterPackout()"></select>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="block-filter-packout" onchange="filterPackout()"></select>
-      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <div id="packout-show-cols" style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <span class="filter-label">Show:</span>
         <button class="col-toggle-btn" id="btn-harvest-cols" onclick="toggleHarvestCols()"><span class="btn-dot"></span>Harvest Check</button>
       </div>
     </div>
-    <div class="legend">
+    <div class="legend" id="packout-legend">
       <div class="legend-item"><div class="legend-dot fancy"></div> Fancy</div>
       <div class="legend-item"><div class="legend-dot choice"></div> Choice</div>
       <div class="legend-item"><div class="legend-dot other"></div> Other</div>
@@ -1357,6 +1357,13 @@ function cropYearLabel(startYear) {
   return startYear + '–' + String(startYear + 1).slice(-2);
 }
 
+// Crop years 2024–25 and earlier use financials season totals (bins only).
+function isHistoricalPackoutYear(yearF) {
+  if (!yearF || yearF === 'all') return false;
+  const y = parseInt(yearF, 10);
+  return Number.isFinite(y) && y <= 2024;
+}
+
 function populateYearFilter() {
   const years = [...new Set(packoutData.map(d => cropYearOf(d['Fruit Packed On'])))].sort().reverse();
   const ypo = document.getElementById('year-filter-packout');
@@ -1523,6 +1530,12 @@ function toggleHarvestCols() {
 function filterPackout() {
   const yearF = document.getElementById('year-filter-packout').value;
   const blockF = document.getElementById('block-filter-packout').value;
+  const historical = isHistoricalPackoutYear(yearF);
+
+  const showCols = document.getElementById('packout-show-cols');
+  const legend = document.getElementById('packout-legend');
+  if (showCols) showCols.style.display = historical ? 'none' : '';
+  if (legend) legend.style.display = historical ? 'none' : '';
 
   let filtered = packoutData.filter(d => {
     const y = cropYearOf(d['Fruit Packed On']);
@@ -1554,7 +1567,13 @@ function filterPackout() {
     g.wJuice  += (d['Total Juice PkOut%']  || 0) * fb;
   });
 
-  let rows = BLOCK_ORDER.map(b => grouped[b]).filter(g => g);
+  const extraOrder = ['2'];
+  const order = historical ? BLOCK_ORDER.concat(extraOrder.filter(b => !BLOCK_ORDER.includes(b))) : BLOCK_ORDER;
+  let rows = order.map(b => grouped[b]).filter(g => g);
+  Object.keys(grouped).forEach(b => {
+    if (!order.includes(b) && grouped[b].records.length) rows.push(grouped[b]);
+  });
+  if (historical) rows = rows.filter(g => g.records.length);
 
   rows.forEach(g => {
     g.records.sort((a, b) => a['Fruit Packed On'].localeCompare(b['Fruit Packed On']));
@@ -1563,7 +1582,7 @@ function filterPackout() {
   if (currentSort.col) {
     rows.sort((a, b) => {
       let av, bv;
-      if (currentSort.col === 'block') { av = BLOCK_ORDER.indexOf(a.block); bv = BLOCK_ORDER.indexOf(b.block); }
+      if (currentSort.col === 'block') { av = order.indexOf(a.block); bv = order.indexOf(b.block); if (av < 0) av = 999; if (bv < 0) bv = 999; }
       else if (currentSort.col === 'variety') { av = a.variety; bv = b.variety; }
       else if (currentSort.col === 'qty') { av = a.totBins; bv = b.totBins; }
       else { av = 0; bv = 0; }
@@ -1574,6 +1593,24 @@ function filterPackout() {
   }
 
   const sortClass = c => c === currentSort.col ? 'sort-' + currentSort.dir : '';
+
+  if (historical) {
+    document.getElementById('packout-head').innerHTML = `<tr>
+    <th class="${sortClass('block')}" onclick="doSort('block')">Block</th>
+    <th class="${sortClass('variety')}" onclick="doSort('variety')">Variety</th>
+    <th class="${sortClass('qty')}" onclick="doSort('qty')">Bins</th>
+  </tr>`;
+    let html = '';
+    rows.forEach(g => {
+      html += `<tr class="row-group">
+      <td>Block ${g.block}</td>
+      <td>${g.variety}</td>
+      <td>${g.totBins.toFixed(1)}</td>
+    </tr>`;
+    });
+    document.getElementById('packout-body').innerHTML = html;
+    return;
+  }
 
   const harvestByBlock = {};
   harvestData.forEach(d => {
