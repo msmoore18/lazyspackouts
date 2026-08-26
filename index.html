@@ -2022,11 +2022,16 @@ function renderChemicals() {
   document.getElementById('chem-cat-grid').innerHTML = cats.map(function(c) {
     const sel = chemSelectedCat === c ? ' selected' : '';
     const pct = 100 * byCat[c] / denom;
-    return '<div class="chem-cat-card' + sel + '" onclick="selectChemCategory(' + JSON.stringify(c) + ')">' +
+    return '<div class="chem-cat-card' + sel + '" data-cat="' + chemEsc(c) + '">' +
       '<div class="chem-cat-name">' + chemEsc(c) + '</div>' +
       '<div class="chem-cat-dollars">' + chemMoney(byCat[c]) + '</div>' +
       '<div class="chem-cat-pct">' + pct.toFixed(1) + '% of year</div></div>';
   }).join('');
+  document.getElementById('chem-cat-grid').onclick = function(ev) {
+    var card = ev.target.closest('.chem-cat-card');
+    if (!card) return;
+    selectChemCategory(card.getAttribute('data-cat'));
+  };
 
   const wrap = document.getElementById('chem-products');
   if (!chemSelectedCat) {
