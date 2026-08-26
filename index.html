@@ -1396,19 +1396,21 @@ function initFilters() {
 // ── GRADE BAR ────────────────────────────────────────────────────────────────
 
 function gradeBar(fancy, fPct, choice, cPct, other, oPct, waste, wPct, juice, jPct) {
-  const total = fancy + choice + other + waste + juice;
-  if (!total) return '<span style="color:#ccc;font-size:11px">—</span>';
-  const segs = [
-    { cls: 'fancy',  v: fancy,  pct: fPct * 100 },
-    { cls: 'choice', v: choice, pct: cPct * 100 },
-    { cls: 'other',  v: other,  pct: oPct * 100 },
-    { cls: 'waste',  v: waste,  pct: wPct * 100 },
-    { cls: 'juice',  v: juice,  pct: jPct * 100 },
+  const segsIn = [
+    { cls: 'fancy',  v: fancy  || 0 },
+    { cls: 'choice', v: choice || 0 },
+    { cls: 'other',  v: other  || 0 },
+    { cls: 'waste',  v: waste  || 0 },
+    { cls: 'juice',  v: juice  || 0 },
   ];
-  return '<div class="grade-bar">' + segs.map(s => {
+  const total = segsIn.reduce(function(s, x) { return s + x.v; }, 0);
+  if (!total) return '<span style="color:#ccc;font-size:11px">—</span>';
+  return '<div class="grade-bar">' + segsIn.map(function(s) {
     if (!s.v) return '';
-    const label = s.pct >= 10 ? s.pct.toFixed(1) + '%' : '';
-    return `<div class="grade-seg ${s.cls}" style="width:${s.pct}%" title="${s.cls}: ${s.v.toLocaleString()} (${s.pct.toFixed(1)}%)">${label}</div>`;
+    const pct = 100 * s.v / total;
+    const label = pct >= 10 ? pct.toFixed(1) + '%' : '';
+    return '<div class="grade-seg ' + s.cls + '" style="width:' + pct + '%" title="' +
+      s.cls + ': ' + s.v.toLocaleString() + ' (' + pct.toFixed(1) + '%)">' + label + '</div>';
   }).join('') + '</div>';
 }
 
@@ -1483,10 +1485,11 @@ function estimatedBins(block, yearF) {
 
 function progressBar(packedBins, estimatedBins) {
   if (estimatedBins === null || estimatedBins <= 0) return '<span style="color:var(--text-light);font-size:11px">—</span>';
-  const pct = Math.min((packedBins / estimatedBins) * 100, 100);
-  const over = packedBins > estimatedBins;
-  const color = over ? '#c62828' : pct >= 75 ? '#2e7d32' : pct >= 40 ? '#f57f17' : '#1565c0';
-  const label = `${packedBins.toFixed(1)} / ${estimatedBins.toFixed(1)} bins (${((packedBins/estimatedBins)*100).toFixed(1)}%)`;
+  const rawPct = (packedBins / estimatedBins) * 100;
+  const pct = Math.min(Math.max(rawPct, 0), 100);
+  const hue = (pct / 100) * 120;
+  const color = 'hsl(' + hue + ', 70%, 38%)';
+  const label = `${packedBins.toFixed(1)} / ${estimatedBins.toFixed(1)} bins (${rawPct.toFixed(1)}%)`;
   return `<div style="min-width:120px">
     <div style="background:#e0e0e0;border-radius:4px;height:10px;overflow:hidden;margin-bottom:3px">
       <div style="width:${pct}%;background:${color};height:100%;border-radius:4px;transition:width 0.3s"></div>
