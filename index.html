@@ -2929,75 +2929,25 @@ const blockDetails = {
         }
 
         function selectFarmBlock(blockId, polygon) {
-            // Reset previous selection
             if (currentPolygon) {
-                currentPolygon.setStyle({ 
+                currentPolygon.setStyle({
                     fillOpacity: 0.4,
                     weight: 2
                 });
             }
 
-            // Highlight selected
-            polygon.setStyle({ 
+            polygon.setStyle({
                 fillOpacity: 0.7,
                 weight: 4
             });
             currentPolygon = polygon;
+            currentBlockId = blockId;
 
             const block = blockData[blockId];
-            
-            // Get selected year (default to previous year)
-            // Only use the dropdown value if we're re-selecting the SAME block
-            const currentYear = new Date().getFullYear();
-            const isChangingYear = (currentBlockId === blockId);  // Same block, just changing year
-            const dropdownYear = document.getElementById('yearSelect')?.value;
-            
-            let selectedYear;
-            if (isChangingYear && dropdownYear && revenue[blockId]?.[dropdownYear]) {
-                // Changing year on same block and that year has data - use dropdown
-                selectedYear = dropdownYear;
-            } else {
-                // New block OR dropdown year doesn't exist - use most recent year available
-                const availableYears = Object.keys(revenue[blockId] || {}).sort().reverse();
-                selectedYear = availableYears.length > 0 ? availableYears[0] : String(currentYear - 1);
-            }
-            
-            // Update current block ID
-            currentBlockId = blockId;
-            
-            // Get revenue data for selected year
-            const yearData = revenue[blockId]?.[selectedYear];
-            
-            if (!yearData) {
-                alert(`No revenue data for Block ${blockId} in ${selectedYear}`);
-                return;
-            }
-            
-            const yearRevenue = yearData.r;
-            const yearBins = yearData.b;
-            const hasNote = yearData.note;
-            const hasRevenue = yearRevenue > 0;
+            const details = blockDetails[blockId] || {};
+            const treeAge = new Date().getFullYear() - block.yearPlanted;
+            const trees = details.trees != null ? details.trees.toLocaleString() : 'N/A';
 
-            // Calculate metrics using selected year data
-            const binsPerAcre = (yearBins / block.acres).toFixed(1);
-            const dollarPerBin = hasRevenue ? (yearRevenue / yearBins).toFixed(2) : 'N/A';
-            const dollarPerAcre = hasRevenue ? (yearRevenue / block.acres).toFixed(2) : 'N/A';
-            const treeAge = 2025 - block.yearPlanted;
-
-            // Determine performance
-            let performanceClass, performanceText;
-            if (block.revenue > 100000) {
-                performanceClass = 'performance-excellent';
-                performanceText = '🟢 Excellent Performance';
-            } else if (block.revenue > 60000) {
-                performanceClass = 'performance-good';
-                performanceText = '🟡 Good Performance';
-            } else {
-                performanceClass = 'performance-needs-attention';
-                performanceText = '🔴 Needs Attention';
-            }
-
-            // Update info panel
             const panel = document.getElementById('infoPanel');
             panel.className = 'info-panel';
             showFarmMapPanel();
@@ -3006,66 +2956,25 @@ const blockDetails = {
                 <div class="close-button-wrapper">
                     <button class="mobile-close-btn" onclick="closeFarmMapPanel()">✕ Close</button>
                 </div>
-                
+
                 <div class="block-header">
                     <h2>Block ${blockId}</h2>
                     <div class="block-color-indicator" style="background: ${block.color};"></div>
                 </div>
 
-                <div class="year-selector">
-                    <label for="yearSelect">📅 Select Year:</label>
-                    <select id="yearSelect" onchange="selectFarmBlock('${blockId}', currentPolygon)">
-                        ${Object.keys(revenue[blockId] || {}).sort().reverse().map(y => 
-                            `<option value="${y}" ${y == selectedYear ? 'selected' : ''}>${y}</option>`
-                        ).join('')}
-                    </select>
-                </div>
-
                 <div class="info-section" style="margin-top: 0; padding-top: 0; border-top: none;">
-                    <h3>📊 ${selectedYear} Financials</h3>
-                </div>
-
-                ${hasNote ? `<div style="background: #FFF3CD; border-left: 4px solid #FFC107; padding: 0.8rem; margin-bottom: 1rem; border-radius: 4px;">
-                    <strong>⚠️ Note:</strong> ${hasNote}
-                </div>` : ''}
-                
-                <div class="stat-grid">
-                    <div class="stat-box">
-                        <div class="stat-label">Yearly Revenue</div>
-                        <div class="stat-value">${hasRevenue ? '$' + yearRevenue.toLocaleString(undefined, {maximumFractionDigits: 0}) : 'N/A'}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Total Bins</div>
-                        <div class="stat-value">${yearBins.toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">$/Bin</div>
-                        <div class="stat-value">${hasRevenue ? '$' + dollarPerBin : 'N/A'}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Bins/Acre</div>
-                        <div class="stat-value">${binsPerAcre}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">$/Acre</div>
-                        <div class="stat-value">${hasRevenue ? '$' + parseFloat(dollarPerAcre).toLocaleString() : 'N/A'}</div>
-                    </div>
-                    
-                </div>
-
-                <div class="info-section">
-                    <h3>📋 Block Details</h3>
+                    <h3>Block Details</h3>
                     <div class="info-row">
                         <span class="info-label">Parcel No.</span>
-                        <span class="info-value">${blockDetails[blockId]?.parcel || 'N/A'}</span>
+                        <span class="info-value">${details.parcel || 'N/A'}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Type</span>
-                        <span class="info-value">${blockDetails[blockId]?.type || block.variety}</span>
+                        <span class="info-value">${details.type || block.variety}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Variety</span>
-                        <span class="info-value">${blockDetails[blockId]?.variety || block.variety}</span>
+                        <span class="info-value">${details.variety || block.variety}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Year Planted</span>
@@ -3081,19 +2990,18 @@ const blockDetails = {
                     </div>
                     <div class="info-row">
                         <span class="info-label"># of Trees</span>
-                        <span class="info-value">${blockDetails[blockId]?.trees.toLocaleString() || 'N/A'}</span>
+                        <span class="info-value">${trees}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Trees Per Acre</span>
-                        <span class="info-value">${blockDetails[blockId]?.treesPerAcre || 'N/A'}</span>
+                        <span class="info-value">${details.treesPerAcre || 'N/A'}</span>
                     </div>
-                </div>
                 </div>
             `;
 
-            // Pan map to block
             farmMap.panTo(polygon.getBounds().getCenter());
         }
+
 
 
         
