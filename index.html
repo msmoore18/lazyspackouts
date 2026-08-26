@@ -1459,16 +1459,26 @@ const BLOCK_CONFIG = {
   '19C': { commodity: 'CARA-CARA',  packhouse: 'Sun Pacific', acres: 11.54, ctnToBin: 23.0,  phLb: 40, rmaLb: 38 },
 };
 
-const FULLY_PICKED = {
-  2025: new Set(['13W','14W','18W','19C','1','2B','16L']),
+// Meagan's estimated bins per lot. 2026E from her financials (Revenue row 180).
+// Crop year 2025 (shown as 2025–26) uses the 2026 estimates. Prior years blank.
+const EST_BINS = {
+  2026: {
+    '1': 498, '2A': 425, '2B': 249, '3': 438, '4': 434, '5': 109,
+    '6': 174, '7': 521, '8': 941, '9': 748, '10': 627, '11': 875,
+    '12': 791, '13W': 120, '14W': 227, '15': 350, '16L': 470,
+    '17': 266, '18W': 868, '19C': 90
+  }
 };
 
-function rmaEstimatedBins(block) {
-  const cfg = BLOCK_CONFIG[block];
-  if (!cfg) return null;
-  const ctnPerAcre = RMA_YIELD_CTN[cfg.commodity.toUpperCase()] || null;
-  if (!ctnPerAcre) return null;
-  return (cfg.acres * ctnPerAcre * (cfg.rmaLb / cfg.phLb)) / cfg.ctnToBin;
+function estimatedBins(block, yearF) {
+  if (!yearF || yearF === 'all') return null;
+  const cropYear = parseInt(yearF, 10);
+  if (!cropYear) return null;
+  const season = cropYear + 1; // 2025–26 crop year -> 2026 estimates
+  const byBlock = EST_BINS[season] || EST_BINS[cropYear];
+  if (!byBlock) return null;
+  const v = byBlock[block];
+  return (v == null || v <= 0) ? null : v;
 }
 
 function progressBar(packedBins, estimatedBins) {
@@ -1578,7 +1588,7 @@ function filterPackout() {
     <th class="harvest-col" style="display:${harvestColsVisible?'':'none'}">Bins (Harvests)</th>
     <th class="harvest-col" style="display:${harvestColsVisible?'':'none'};text-align:center">Match</th>
     <th>Grade Distribution</th>
-    <th>RMA Yield Progress <button onclick="event.stopPropagation();showRmaModal()" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:none;color:rgba(255,255,255,0.85);font-size:10px;font-weight:700;cursor:pointer;padding:0;line-height:1;vertical-align:middle;margin-left:4px" title="View RMA yield data source">?</button></th>
+    <th>Est. Bins Progress</th>
   </tr>`;
 
   let html = '';
@@ -1603,13 +1613,10 @@ function filterPackout() {
         ? '<span title="Packout and harvest totals match" style="color:#2e7d32;font-size:16px">✔</span>'
         : `<span title="Packout: ${pQtyFmt} | Harvest: ${hQtyFmt}" style="color:#c62828;font-size:16px">✘</span>`;
 
-    const estBins = rmaEstimatedBins(g.block);
-    const pickedYear = parseInt(yearF) || null;
-    const isFullyPicked = pickedYear && FULLY_PICKED[pickedYear] && FULLY_PICKED[pickedYear].has(g.block);
-    const pickedBadge = isFullyPicked ? '<span class="picked-badge">✔ Fully Picked</span>' : '';
+    const estBins = estimatedBins(g.block, yearF);
     const multi = g.records.length > 1;
     html += `<tr class="row-group" onclick="toggleBlock('${bid}')">
-      <td>${multi ? `<span class="expand-icon" id="icon-${bid}">▶</span>` : ''}Block ${g.block}${multi ? ` <span style="color:var(--text-light);font-weight:400;font-size:11px">(${g.records.length})</span>` : ''}${pickedBadge}</td>
+      <td>${multi ? `<span class="expand-icon" id="icon-${bid}">▶</span>` : ''}Block ${g.block}${multi ? ` <span style="color:var(--text-light);font-weight:400;font-size:11px">(${g.records.length})</span>` : ''}</td>
       <td>${g.variety}</td>
       <td>${pQtyFmt}</td>
       <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">${hQtyFmt}</td>
@@ -1728,74 +1735,6 @@ function showDayDetail(day, month, year) {
   document.getElementById('modal').classList.add('open');
 }
 
-function showRmaModal() {
-  const html = `
-    <div class="modal-title">RMA Yield Progress — Data Source</div>
-    <p style="font-size:12px;color:var(--text-light);margin:0 0 12px">
-      Yield estimates come from the USDA Risk Management Agency (RMA) 2026 Actuarial Data Master (ADM),
-      Tulare County, California. Expected area yield is expressed in cartons (ctn) per acre and converted
-      to bins using the block-specific conversion factors below.
-      <br><br>
-      <strong>Formula:</strong> Estimated Bins = Acres × Expected Area Yield (ctn/acre) ÷ CTN-to-Bin Conversion
-    </p>
-
-    <div style="font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">RMA 2026 Commodity Yields</div>
-    <table class="modal-table" style="margin-bottom:18px">
-      <thead><tr>
-        <th>Commodity Type</th>
-        <th>Expected Area Yield (ctn/acre)</th>
-        <th>Established Price ($/ctn)</th>
-        <th>Revenue/Acre</th>
-      </tr></thead>
-      <tbody>
-        <tr><td>Early Season M/T (Clementine)</td><td>864</td><td>$15.70</td><td>$13,564.80</td></tr>
-        <tr><td>Late Season M/T (Tango, Murcott)</td><td>864</td><td>$16.40</td><td>$14,169.60</td></tr>
-        <tr><td>Valencia</td><td>531</td><td>$10.20</td><td>$5,416.20</td></tr>
-        <tr><td>Navel (Washington, Late Lane, Powells)</td><td>531</td><td>$10.80</td><td>$5,734.80</td></tr>
-        <tr><td>Cara Cara</td><td>531</td><td>$14.05</td><td>$7,460.55</td></tr>
-        <tr><td>Grapefruit</td><td>929</td><td>$8.05</td><td>$7,478.45</td></tr>
-        <tr><td>Lemon</td><td>674</td><td>$11.05</td><td>$7,447.70</td></tr>
-      </tbody>
-    </table>
-
-    <div style="font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Block Configuration</div>
-    <table class="modal-table">
-      <thead><tr>
-        <th>Block</th>
-        <th>Commodity</th>
-        <th>Pack House</th>
-        <th>Acres</th>
-        <th>PH CTN-to-Bin</th>
-        <th>PH Lb/CTN</th>
-        <th>RMA Lb/CTN</th>
-        <th>Est. Bins (2026)</th>
-      </tr></thead>
-      <tbody>
-        ${Object.entries(BLOCK_CONFIG).map(([blk, cfg]) => {
-          const ctnPerAcre = RMA_YIELD_CTN[cfg.commodity.toUpperCase()];
-          const estBins = ctnPerAcre ? (cfg.acres * ctnPerAcre * (cfg.rmaLb / cfg.phLb) / cfg.ctnToBin).toFixed(1) : '—';
-          return `<tr>
-            <td>Block ${blk}</td>
-            <td>${cfg.commodity.charAt(0).toUpperCase() + cfg.commodity.slice(1).toLowerCase()}</td>
-            <td>${cfg.packhouse}</td>
-            <td>${cfg.acres}</td>
-            <td>${cfg.ctnToBin}</td>
-            <td>${cfg.phLb}</td>
-            <td>${cfg.rmaLb}</td>
-            <td>${estBins}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    <p style="font-size:11px;color:var(--text-light);margin:10px 0 0">
-      Source: USDA RMA Actuarial Data Master, 2026 Reinsurance Year — 
-      <a href="https://pubfs-rma.fpac.usda.gov/pub/References/actuarial_data_master/2025/index.html" 
-         target="_blank" style="color:var(--mid)">pubfs-rma.fpac.usda.gov</a>
-    </p>`;
-  document.getElementById('modal-body').innerHTML = html;
-  document.getElementById('modal').classList.add('open');
-}
-
 function closeModal(e) {
   if (!e || e.target === document.getElementById('modal')) {
     document.getElementById('modal').classList.remove('open');
@@ -1900,15 +1839,15 @@ function parseWorkbook(wb) {
         'Block ID':                       String(r['Block ID']).toUpperCase().trim(),
         'Field Box (Processed This Date)':parseFloat(r['Field Box (Processed This Date)']) || 0,
         'Total Bins':                     parseFloat(r['Total Bins'])    || 0,
-        'Total Fancy':                    parseFloat(r['Total Fancy'])   || 0,
+        'Total Fancy':                    parseFloat(r['Total Fancy'] ?? r['Total Fancy (CTN)'])   || 0,
         'Total Fancy PkOut%':             parseFloat(r['Total Fancy PkOut%'])  || 0,
-        'Total Choice':                   parseFloat(r['Total Choice'])  || 0,
+        'Total Choice':                   parseFloat(r['Total Choice'] ?? r['Total Choice (CTN)'])  || 0,
         'Total Choice PkOut%':            parseFloat(r['Total Choice PkOut%']) || 0,
-        'Total Other':                    parseFloat(r['Total Other'])   || 0,
+        'Total Other':                    parseFloat(r['Total Other'] ?? r['Total Other (CTN)'])   || 0,
         'Total Other PkOut%':             parseFloat(r['Total Other PkOut%'])  || 0,
-        'Total Waste':                    parseFloat(r['Total Waste'])   || 0,
+        'Total Waste':                    parseFloat(r['Total Waste'] ?? r['Total Waste (CTN)'])   || 0,
         'Total Waste PkOut%':             parseFloat(r['Total Waste PkOut%'])  || 0,
-        'Total Juice':                    parseFloat(r['Total Juice'])   || 0,
+        'Total Juice':                    parseFloat(r['Total Juice'] ?? r['Total Juice (CTN)'])   || 0,
         'Total Juice PkOut%':             parseFloat(r['Total Juice PkOut%'])  || 0,
       };
     });
