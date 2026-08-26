@@ -968,6 +968,172 @@
     #maps-section .close-button-wrapper { display: none; }
   }
 
+  /* ── CHEMICALS & FERTILIZER (scoped under #chemicals-section) ── */
+  #chemicals-section .chem-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 28px;
+    margin-bottom: 22px;
+    padding: 18px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  #chemicals-section .chem-total-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+  #chemicals-section .chem-total-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--dark);
+    letter-spacing: 0.01em;
+  }
+  #chemicals-section .chem-compare {
+    font-size: 13px;
+    color: var(--text-light);
+  }
+  #chemicals-section .chem-compare.up { color: #c62828; }
+  #chemicals-section .chem-compare.down { color: #2e7d32; }
+  #chemicals-section .chem-cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  #chemicals-section .chem-cat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  #chemicals-section .chem-cat-card:hover {
+    border-color: var(--mid);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  #chemicals-section .chem-cat-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  #chemicals-section .chem-cat-name {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  #chemicals-section .chem-cat-dollars {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--dark);
+  }
+  #chemicals-section .chem-cat-pct {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+  #chemicals-section .chem-products {
+    display: none;
+    margin-bottom: 22px;
+  }
+  #chemicals-section .chem-products.open { display: block; }
+  #chemicals-section .chem-products-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  #chemicals-section .chem-products-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--dark);
+  }
+  #chemicals-section .chem-all-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text-light);
+    cursor: pointer;
+  }
+  #chemicals-section .chem-all-btn:hover { border-color: var(--mid); color: var(--text); }
+  #chemicals-section .chem-num { text-align: right; font-variant-numeric: tabular-nums; }
+  #chemicals-section .chem-chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 14px;
+  }
+  #chemicals-section .chem-chart-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 16px;
+  }
+  #chemicals-section .chem-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 180px;
+  }
+  #chemicals-section .chem-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  #chemicals-section .chem-bar {
+    width: 100%;
+    max-width: 48px;
+    background: var(--mid);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    cursor: default;
+  }
+  #chemicals-section .chem-bar:hover { background: var(--accent); }
+  #chemicals-section .chem-bar.zero { background: var(--border); }
+  #chemicals-section .chem-bar-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-top: 6px;
+  }
+  #chemicals-section .chem-bar-amt {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    #chemicals-section .chem-total-value { font-size: 26px; }
+    #chemicals-section .chem-bars { height: 140px; gap: 3px; }
+    #chemicals-section .chem-bar-amt { font-size: 8px; }
+  }
+
+
 </style>
 </head>
 <body>
@@ -979,7 +1145,7 @@
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
     <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Harvest Calendar</div>
     <div class="nav-tab disabled">Financials</div>
-    <div class="nav-tab disabled">Chemicals &amp; Fertilizer</div>
+    <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
     <div class="nav-tab" data-section="maps" onclick="showSection('maps', this)">Maps</div>
   </div>
   <button class="menu-btn" onclick="toggleMobile()">☰</button>
@@ -989,7 +1155,7 @@
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
   <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Harvest Calendar</div>
   <div class="mobile-menu-item disabled">Financials</div>
-  <div class="mobile-menu-item disabled">Chemicals &amp; Fertilizer</div>
+  <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
   <div class="mobile-menu-item" onclick="showSection('maps',this);toggleMobile()">Maps</div>
 </div>
 
@@ -1052,7 +1218,38 @@
     <div class="coming-soon"><div class="coming-soon-icon">💰</div><div class="coming-soon-label">Financials</div><p>Coming Soon</p></div>
   </div>
   <div id="chemicals-section" class="section">
-    <div class="coming-soon"><div class="coming-soon-icon">🧪</div><div class="coming-soon-label">Chemicals &amp; Fertilizer</div><p>Coming Soon</p></div>
+    <div class="page-title">Chemicals &amp; Fertilizer</div>
+    <div class="filter-bar">
+      <span class="filter-label">Year</span>
+      <select id="chem-year-filter" onchange="onChemYearChange()">
+        <option value="2025">2025</option>
+        <option value="2026" selected>2026 YTD</option>
+      </select>
+    </div>
+    <div id="chem-summary" class="chem-summary"></div>
+    <div id="chem-cat-grid" class="chem-cat-grid"></div>
+    <div id="chem-products" class="chem-products">
+      <div class="chem-products-head">
+        <div id="chem-products-title" class="chem-products-title"></div>
+        <button type="button" class="chem-all-btn" onclick="selectChemCategory(null)">All</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="chem-num">Net $</th>
+              <th class="chem-num">Share</th>
+            </tr>
+          </thead>
+          <tbody id="chem-products-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chem-chart-wrap">
+      <div class="chem-chart-title">Monthly spend</div>
+      <div id="chem-bars" class="chem-bars"></div>
+    </div>
   </div>
   <div id="maps-section" class="section">
     <div id="farm-map-wrap">
@@ -1088,6 +1285,8 @@
 
 let harvestData = [];
 let packoutData = [];
+let nutrienData = [];
+let chemSelectedCat = null;
 
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -1132,6 +1331,7 @@ function showSection(name, el) {
 
   if (name === 'harvest') updateCalendar();
   if (name === 'packout') filterPackout();
+  if (name === 'chemicals') renderChemicals();
   if (name === 'maps') {
     initFarmMap();
     setTimeout(function() {
@@ -1731,6 +1931,148 @@ function parseWorkbook(wb) {
   currentMonth = now.getMonth();
   updateCalendar();
 }
+
+// ── CHEMICALS & FERTILIZER ────────────────────────────────────────────────────
+
+function chemEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function chemMoney(n, cents) {
+  const abs = Math.abs(n);
+  const s = cents
+    ? abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : Math.round(abs).toLocaleString('en-US');
+  return (n < 0 ? '-$' : '$') + s;
+}
+
+function loadNutrien() {
+  const url = new URL('nutrien.json', document.baseURI).href;
+  fetch(url)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(rows) {
+      nutrienData = Array.isArray(rows) ? rows : [];
+      if (document.getElementById('chemicals-section').classList.contains('active')) {
+        renderChemicals();
+      }
+    })
+    .catch(function() {
+      nutrienData = [];
+    });
+}
+
+function onChemYearChange() {
+  chemSelectedCat = null;
+  renderChemicals();
+}
+
+function selectChemCategory(cat) {
+  chemSelectedCat = (cat && chemSelectedCat === cat) ? null : cat;
+  renderChemicals();
+}
+
+function renderChemicals() {
+  const yearSel = document.getElementById('chem-year-filter');
+  if (!yearSel) return;
+  const year = parseInt(yearSel.value, 10);
+  const rows = nutrienData.filter(function(r) { return r.year === year; });
+  const total = rows.reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+
+  let compareHtml = '';
+  if (year === 2026 && rows.length) {
+    const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let latest = 0;
+    rows.forEach(function(r) {
+      const m = parseInt(String(r.date).slice(5, 7), 10);
+      if (m > latest) latest = m;
+    });
+    const ytd26 = rows.filter(function(r) {
+      return parseInt(String(r.date).slice(5, 7), 10) <= latest;
+    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+    const ytd25 = nutrienData.filter(function(r) {
+      return r.year === 2025 && parseInt(String(r.date).slice(5, 7), 10) <= latest;
+    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+    const diff = ytd26 - ytd25;
+    const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+    const sign = diff > 0 ? '+' : (diff < 0 ? '' : '');
+    let pctBit = '';
+    if (ytd25) {
+      const pct = (diff / ytd25) * 100;
+      const psign = pct > 0 ? '+' : '';
+      pctBit = ' (' + psign + pct.toFixed(0) + '%)';
+    }
+    compareHtml = '<div class="chem-compare ' + dir + '">' +
+      sign + chemMoney(diff) + ' vs 2025 Jan–' + MONTHS[latest] + pctBit + '</div>';
+  }
+
+  document.getElementById('chem-summary').innerHTML =
+    '<div><div class="chem-total-label">' + (year === 2026 ? '2026 YTD spend' : '2025 spend') + '</div>' +
+    '<div class="chem-total-value">' + chemMoney(total) + '</div></div>' + compareHtml;
+
+  const byCat = {};
+  rows.forEach(function(r) {
+    byCat[r.category] = (byCat[r.category] || 0) + (r.cost || 0);
+  });
+  const cats = Object.keys(byCat).sort(function(a, b) { return byCat[b] - byCat[a]; });
+  const denom = total || 1;
+
+  document.getElementById('chem-cat-grid').innerHTML = cats.map(function(c) {
+    const sel = chemSelectedCat === c ? ' selected' : '';
+    const pct = 100 * byCat[c] / denom;
+    return '<div class="chem-cat-card' + sel + '" onclick="selectChemCategory(' + JSON.stringify(c) + ')">' +
+      '<div class="chem-cat-name">' + chemEsc(c) + '</div>' +
+      '<div class="chem-cat-dollars">' + chemMoney(byCat[c]) + '</div>' +
+      '<div class="chem-cat-pct">' + pct.toFixed(1) + '% of year</div></div>';
+  }).join('');
+
+  const wrap = document.getElementById('chem-products');
+  if (!chemSelectedCat) {
+    wrap.classList.remove('open');
+  } else {
+    wrap.classList.add('open');
+    document.getElementById('chem-products-title').textContent = chemSelectedCat;
+    const catRows = rows.filter(function(r) { return r.category === chemSelectedCat; });
+    const byName = {};
+    catRows.forEach(function(r) { byName[r.name] = (byName[r.name] || 0) + (r.cost || 0); });
+    const catTot = byCat[chemSelectedCat] || 0;
+    const products = Object.keys(byName).sort(function(a, b) { return byName[b] - byName[a]; });
+    const shareDen = catTot || 1;
+    document.getElementById('chem-products-body').innerHTML = products.length
+      ? products.map(function(n) {
+          const v = byName[n];
+          const share = 100 * v / shareDen;
+          return '<tr><td>' + chemEsc(n) + '</td>' +
+            '<td class="chem-num">' + chemMoney(v, true) + '</td>' +
+            '<td class="chem-num">' + share.toFixed(1) + '%</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3" style="color:var(--text-light)">No products this year</td></tr>';
+  }
+
+  const monthLabs = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const vals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  rows.forEach(function(r) {
+    const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
+    if (m >= 0 && m < 12) vals[m] += (r.cost || 0);
+  });
+  const max = Math.max.apply(null, vals.concat([1]));
+  document.getElementById('chem-bars').innerHTML = monthLabs.map(function(lab, i) {
+    const v = vals[i];
+    const h = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
+    const zero = v ? '' : ' zero';
+    const tip = lab + ' ' + chemMoney(v);
+    const amt = v ? chemMoney(v) : '';
+    return '<div class="chem-bar-col">' +
+      '<div class="chem-bar-amt">' + amt + '</div>' +
+      '<div class="chem-bar' + zero + '" style="height:' + h + 'px" title="' + tip + '"></div>' +
+      '<div class="chem-bar-label">' + lab + '</div></div>';
+  }).join('');
+}
+
+loadNutrien();
+
 </script>
 
 <!-- LOADING / UPLOAD OVERLAY -->
