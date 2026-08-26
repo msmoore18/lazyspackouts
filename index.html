@@ -1247,7 +1247,7 @@
       </div>
     </div>
     <div class="chem-chart-wrap">
-      <div class="chem-chart-title">Monthly spend</div>
+      <div id="chem-chart-title" class="chem-chart-title">Monthly spend</div>
       <div id="chem-bars" class="chem-bars"></div>
     </div>
   </div>
@@ -2057,8 +2057,17 @@ function renderChemicals() {
   }
 
   const monthLabs = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const chartRows = chemSelectedCat
+    ? rows.filter(function(r) { return r.category === chemSelectedCat; })
+    : rows;
+  const chartTitle = document.getElementById('chem-chart-title');
+  if (chartTitle) {
+    chartTitle.textContent = chemSelectedCat
+      ? chemSelectedCat + ' monthly spend'
+      : 'Monthly spend';
+  }
   const vals = [0,0,0,0,0,0,0,0,0,0,0,0];
-  rows.forEach(function(r) {
+  chartRows.forEach(function(r) {
     const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
     if (m >= 0 && m < 12) vals[m] += (r.cost || 0);
   });
