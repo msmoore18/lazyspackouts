@@ -1610,7 +1610,7 @@ function filterPackout() {
     const pQtyFmt = pQty.toFixed(1);
     const hQtyFmt = hData ? hQty.toFixed(1) : '<span style="color:var(--text-light)">—</span>';
 
-    const match = hData !== null && Math.abs(pQty - hQty) < 0.01;
+    const match = hData !== null && pQty.toFixed(1) === hQty.toFixed(1);
     const matchIcon = hData === null
       ? '<span title="No harvest data for this block" style="color:var(--text-light);font-size:15px">—</span>'
       : match
