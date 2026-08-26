@@ -1842,7 +1842,13 @@ function parseWorkbook(wb) {
         'Fruit Packed On':                dateStr,
         'Block ID':                       String(r['Block ID']).toUpperCase().trim(),
         'Field Box (Processed This Date)':parseFloat(r['Field Box (Processed This Date)']) || 0,
-        'Total Bins':                     parseFloat(r['Total Bins'])    || 0,
+        'Total Bins':                     (function() {
+          var bins = parseFloat(r['Total Bins']);
+          var fb = parseFloat(r['Field Box (Processed This Date)']) || 0;
+          if (bins) return bins;
+          if (fb) return fb / 16;
+          return 0;
+        })(),
         'Total Fancy':                    parseFloat(r['Total Fancy'] ?? r['Total Fancy (CTN)'])   || 0,
         'Total Fancy PkOut%':             parseFloat(r['Total Fancy PkOut%'])  || 0,
         'Total Choice':                   parseFloat(r['Total Choice'] ?? r['Total Choice (CTN)'])  || 0,
