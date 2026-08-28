@@ -1247,6 +1247,8 @@
             <th>Vendor</th>
             <th>Block</th>
             <th>Work</th>
+            <th>Qty</th>
+            <th>Rate</th>
             <th>Amount</th>
           </tr>
         </thead>
@@ -1931,6 +1933,19 @@ function laborMoney(n) {
   return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
+function laborQty(d) {
+  if (d.qty == null || d.qty === '') return '—';
+  const n = Number(d.qty);
+  const s = Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+  return d.unit ? s + ' ' + d.unit : s;
+}
+
+function laborRate(d) {
+  if (d.rate == null || d.rate === '') return '—';
+  const u = d.unit ? '/' + d.unit.replace(/s$/, '') : '';
+  return laborMoney(d.rate) + u;
+}
+
 function laborShortVendor(v) {
   const s = String(v || '');
   if (s.includes('Garcia')) return 'J. Garcia';
@@ -2002,6 +2017,8 @@ function renderLabor() {
       '<td>' + laborShortVendor(d.vendor) + '</td>' +
       '<td>' + (d.block || '—') + '</td>' +
       '<td>' + (d.work || '—') + '</td>' +
+      '<td>' + laborQty(d) + '</td>' +
+      '<td>' + laborRate(d) + '</td>' +
       '<td>' + laborMoney(d.amount || 0) + '</td>' +
     '</tr>'
   ).join('');
@@ -2098,6 +2115,9 @@ function parseWorkbook(wb) {
           vendor: String(r['Vendor'] || '').trim(),
           block: String(r['Block'] || '').trim(),
           work: String(r['Work Description'] || '').trim(),
+          qty: r['Qty'] == null || r['Qty'] === '' ? null : parseFloat(r['Qty']),
+          unit: String(r['Unit'] || '').trim(),
+          rate: r['Rate'] == null || r['Rate'] === '' ? null : parseFloat(r['Rate']),
           qb: String(r['Quickbooks Description'] || '').trim(),
           amount: parseFloat(r['Amount']) || 0,
         };
