@@ -1,5 +1,57 @@
 [
   {
+    "date": "2026-08-28",
+    "year": 2026,
+    "name": "ACTARA 4X30OZ",
+    "category": "Insecticide",
+    "productType": "Chemical",
+    "quantity": 390.0,
+    "unit": "OZ",
+    "unitPrice": 3.5769,
+    "cost": 1394.99,
+    "invoiceId": "59155205",
+    "productNumber": "1000001672"
+  },
+  {
+    "date": "2026-08-28",
+    "year": 2026,
+    "name": "DUNE 2X2.5GA",
+    "category": "Fertilizer",
+    "productType": "Fertilizer",
+    "quantity": 2.5,
+    "unit": "GA",
+    "unitPrice": 200.0,
+    "cost": 500.0,
+    "invoiceId": "59155205",
+    "productNumber": "1001270557"
+  },
+  {
+    "date": "2026-08-28",
+    "year": 2026,
+    "name": "WIDESPREAD MAX 4X1GA",
+    "category": "Spray adjuvant",
+    "productType": "Chemical",
+    "quantity": 4.0,
+    "unit": "GA",
+    "unitPrice": 123.929,
+    "cost": 495.72,
+    "invoiceId": "59155205",
+    "productNumber": "1000017380"
+  },
+  {
+    "date": "2026-08-28",
+    "year": 2026,
+    "name": "BRANDT TRIPLELINE DEFOAMER 12X1QT",
+    "category": "Spray adjuvant",
+    "productType": "Chemical",
+    "quantity": 2.0,
+    "unit": "QT",
+    "unitPrice": 12.8301,
+    "cost": 25.66,
+    "invoiceId": "59155205",
+    "productNumber": "1000717475"
+  },
+  {
     "date": "2025-12-16",
     "year": 2025,
     "name": "SPREADER 90 4X1GA",
