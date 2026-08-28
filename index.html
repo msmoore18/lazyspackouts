@@ -1146,6 +1146,7 @@
   <div class="nav-tabs">
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
     <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Harvest Calendar</div>
+    <div class="nav-tab" data-section="labor" onclick="showSection('labor',this)">Contract Labor</div>
     <div class="nav-tab disabled">Financials</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
     <div class="nav-tab" data-section="maps" onclick="showSection('maps', this)">Maps</div>
@@ -1156,6 +1157,7 @@
 <div class="mobile-menu" id="mobile-menu">
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
   <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Harvest Calendar</div>
+  <div class="mobile-menu-item" onclick="showSection('labor',this);toggleMobile()">Contract Labor</div>
   <div class="mobile-menu-item disabled">Financials</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
   <div class="mobile-menu-item" onclick="showSection('maps',this);toggleMobile()">Maps</div>
@@ -1213,6 +1215,35 @@
       </div>
     </div>
     <div id="cal-content"></div>
+  </div>
+
+  <!-- CONTRACT LABOR -->
+  <div id="labor-section" class="section">
+    <div class="page-title">Contract Labor</div>
+    <div class="filter-bar">
+      <span class="filter-label">Year</span>
+      <select id="labor-year-filter" onchange="renderLabor()"></select>
+      <span class="filter-label" style="margin-left:8px">Work</span>
+      <select id="labor-work-filter" onchange="renderLabor()"></select>
+      <span class="filter-label" style="margin-left:8px">Block</span>
+      <select id="labor-block-filter" onchange="renderLabor()"></select>
+      <div style="margin-left:auto;font-size:13px;color:var(--text-light)" id="labor-total"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Paid</th>
+            <th>Worked</th>
+            <th>Vendor</th>
+            <th>Block</th>
+            <th>Work</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="labor-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- COMING SOON -->
@@ -1287,6 +1318,7 @@
 
 let harvestData = [];
 let packoutData = [];
+let laborData = [];
 let nutrienData = [];
 let chemSelectedCat = null;
 
@@ -1315,6 +1347,8 @@ function shiftMonth(dir) {
     if (prevYear) yearSel.value = prevYear;
   }
   updateCalendar();
+  initLaborFilters();
+  renderLabor();
 }
 
 // ── NORMALIZE BLOCK IDs ──────────────────────────────────────────────────────
@@ -1333,6 +1367,7 @@ function showSection(name, el) {
 
   if (name === 'harvest') updateCalendar();
   if (name === 'packout') filterPackout();
+  if (name === 'labor') renderLabor();
   if (name === 'chemicals') renderChemicals();
   if (name === 'maps') {
     initFarmMap();
@@ -1829,6 +1864,94 @@ function excelDateToStr(val) {
   return String(val);
 }
 
+
+function laborFmtDate(s) {
+  if (!s) return '—';
+  const [y,m,d] = String(s).slice(0,10).split('-').map(Number);
+  if (!y) return '—';
+  return new Date(y, m-1, d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function laborMoney(n) {
+  return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function laborShortVendor(v) {
+  const s = String(v || '');
+  if (s.includes('Garcia')) return 'J. Garcia';
+  if (s.toLowerCase().includes('barringer')) return 'Barringer Ag';
+  if (s.includes('Paragon')) return 'Paragon';
+  if (s.includes('Foothill')) return 'Foothill Ag';
+  if (s.includes('High Sierra')) return 'High Sierra';
+  return s;
+}
+
+function initLaborFilters() {
+  const years = [...new Set(laborData.map(d => (d.paid || '').slice(0,4)))].filter(Boolean).sort().reverse();
+  const ysel = document.getElementById('labor-year-filter');
+  if (!ysel) return;
+  const prevY = ysel.value;
+  ysel.innerHTML = '<option value="all">All Years</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y; ysel.appendChild(o);
+  });
+  if ([...ysel.options].some(o => o.value === prevY)) ysel.value = prevY;
+  else if (years.length) ysel.value = years[0];
+
+  const works = [...new Set(laborData.map(d => d.work).filter(Boolean))].sort();
+  const wsel = document.getElementById('labor-work-filter');
+  const prevW = wsel.value;
+  wsel.innerHTML = '<option value="all">All Work</option>';
+  works.forEach(w => {
+    const o = document.createElement('option');
+    o.value = w; o.textContent = w; wsel.appendChild(o);
+  });
+  if ([...wsel.options].some(o => o.value === prevW)) wsel.value = prevW;
+
+  const blocks = [...new Set(laborData.map(d => d.block).filter(Boolean))].sort((a,b) => {
+    const na = parseInt(String(a).replace(/\\D/g,''), 10);
+    const nb = parseInt(String(b).replace(/\\D/g,''), 10);
+    if (na && nb && na !== nb) return na - nb;
+    return String(a).localeCompare(String(b));
+  });
+  const bsel = document.getElementById('labor-block-filter');
+  const prevB = bsel.value;
+  bsel.innerHTML = '<option value="all">All Blocks</option>';
+  blocks.forEach(b => {
+    const o = document.createElement('option');
+    o.value = b; o.textContent = b; bsel.appendChild(o);
+  });
+  if ([...bsel.options].some(o => o.value === prevB)) bsel.value = prevB;
+}
+
+function renderLabor() {
+  const ysel = document.getElementById('labor-year-filter');
+  if (!ysel) return;
+  if (!ysel.options.length) initLaborFilters();
+  const yearF = ysel.value;
+  const workF = document.getElementById('labor-work-filter').value;
+  const blockF = document.getElementById('labor-block-filter').value;
+  const rows = laborData.filter(d => {
+    const y = (d.paid || '').slice(0,4);
+    return (yearF === 'all' || y === yearF)
+      && (workF === 'all' || d.work === workF)
+      && (blockF === 'all' || d.block === blockF);
+  });
+  const tot = rows.reduce((s, d) => s + (d.amount || 0), 0);
+  document.getElementById('labor-total').textContent = rows.length + ' jobs  ·  ' + laborMoney(tot);
+  document.getElementById('labor-body').innerHTML = rows.map(d =>
+    '<tr>' +
+      '<td>' + laborFmtDate(d.paid) + '</td>' +
+      '<td>' + laborFmtDate(d.worked) + '</td>' +
+      '<td>' + laborShortVendor(d.vendor) + '</td>' +
+      '<td>' + (d.block || '—') + '</td>' +
+      '<td>' + (d.work || '—') + '</td>' +
+      '<td>' + laborMoney(d.amount || 0) + '</td>' +
+    '</tr>'
+  ).join('');
+}
+
 function parseWorkbook(wb) {
   // ── Harvest Reports ──
   const hws = wb.Sheets['Harvest Reports'];
@@ -1898,6 +2021,34 @@ function parseWorkbook(wb) {
         'Total Juice PkOut%':             parseFloat(r['Total Juice PkOut%'])  || 0,
       };
     });
+
+
+  // ── Contract Labor ──
+  laborData = [];
+  const lws = wb.Sheets['Contract Labor'];
+  if (lws) {
+    const lRows = XLSX.utils.sheet_to_json(lws, { raw: true, defval: null });
+    laborData = lRows
+      .filter(r => r['Vendor'] && r['Amount'] != null)
+      .map(r => {
+        function dstr(val) {
+          if (!val) return '';
+          if (val instanceof Date) return excelDateToStr(val);
+          if (typeof val === 'number') return excelDateToStr(val);
+          return String(val).slice(0, 10);
+        }
+        return {
+          paid: dstr(r['Payment Date']),
+          worked: dstr(r['Approx Date of Work']),
+          vendor: String(r['Vendor'] || '').trim(),
+          block: String(r['Block'] || '').trim(),
+          work: String(r['Work Description'] || '').trim(),
+          qb: String(r['Quickbooks Description'] || '').trim(),
+          amount: parseFloat(r['Amount']) || 0,
+        };
+      });
+    laborData.sort((a,b) => (a.paid + a.worked).localeCompare(b.paid + b.worked));
+  }
 
   // Boot the dashboard
   initFilters();
