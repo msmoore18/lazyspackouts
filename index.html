@@ -520,6 +520,15 @@
     background: linear-gradient(135deg, white 0%, #faf4ec 100%);
   }
 
+  .cal-pill.spray {
+    background: #d7efe6;
+    color: #0d5c4d;
+  }
+
+  .cal-cell.has-spray:not(.has-harvest):not(.has-labor) {
+    background: linear-gradient(135deg, white 0%, #eef7f3 100%);
+  }
+
   /* ── MODAL ── */
   .modal-backdrop {
     display: none;
@@ -1144,6 +1153,47 @@
     #chemicals-section .chem-bar-amt { font-size: 8px; }
   }
 
+  #chemicals-section .chem-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+  }
+  #chemicals-section .chem-view-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #chemicals-section .chem-view-btn:hover { border-color: var(--mid); color: var(--text); }
+  #chemicals-section .chem-view-btn.active {
+    background: var(--dark);
+    color: white;
+    border-color: var(--dark);
+  }
+  #chemicals-section #chem-sprays-view { display: none; }
+  #chemicals-section #chem-sprays-view.open { display: block; }
+  #chemicals-section #chem-purchases-view.hidden { display: none; }
+  #chemicals-section .spray-note {
+    font-size: 13px;
+    color: var(--text-light);
+    padding: 4px 2px 16px;
+  }
+  #chemicals-section .spray-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  #chemicals-section #spray-filter-bar { margin-top: 0; }
 
 </style>
 </head>
@@ -1269,28 +1319,63 @@
         <option value="2025">2025</option>
         <option value="2026" selected>2026 YTD</option>
       </select>
-    </div>
-    <div id="chem-summary" class="chem-summary"></div>
-    <div id="chem-cat-grid" class="chem-cat-grid"></div>
-    <div class="chem-chart-wrap">
-      <div id="chem-chart-title" class="chem-chart-title">Monthly spend</div>
-      <div id="chem-bars" class="chem-bars"></div>
-    </div>
-    <div id="chem-products" class="chem-products">
-      <div class="chem-products-head">
-        <div id="chem-products-title" class="chem-products-title"></div>
-        <button type="button" class="chem-all-btn" onclick="selectChemCategory(null)">All</button>
+      <span class="filter-label" style="margin-left:8px">View</span>
+      <div class="chem-view-toggle" role="group" aria-label="Chemicals view">
+        <button type="button" class="chem-view-btn active" id="chem-view-purchases" onclick="setChemView('purchases')">Purchases</button>
+        <button type="button" class="chem-view-btn" id="chem-view-sprays" onclick="setChemView('sprays')">Spray recs</button>
       </div>
+    </div>
+    <div id="chem-purchases-view">
+      <div id="chem-summary" class="chem-summary"></div>
+      <div id="chem-cat-grid" class="chem-cat-grid"></div>
+      <div class="chem-chart-wrap">
+        <div id="chem-chart-title" class="chem-chart-title">Monthly spend</div>
+        <div id="chem-bars" class="chem-bars"></div>
+      </div>
+      <div id="chem-products" class="chem-products">
+        <div class="chem-products-head">
+          <div id="chem-products-title" class="chem-products-title"></div>
+          <button type="button" class="chem-all-btn" onclick="selectChemCategory(null)">All</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th class="chem-num">Net $</th>
+                <th class="chem-num">Share</th>
+              </tr>
+            </thead>
+            <tbody id="chem-products-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="chem-sprays-view">
+      <div id="spray-summary" class="chem-summary"></div>
+      <div class="filter-bar" id="spray-filter-bar">
+        <span class="filter-label">Block</span>
+        <select id="spray-block-filter" onchange="renderSprayRecs()"></select>
+        <span class="filter-label" style="margin-left:8px">Pest</span>
+        <select id="spray-pest-filter" onchange="renderSprayRecs()"></select>
+        <span class="filter-label" style="margin-left:8px">Product</span>
+        <select id="spray-product-filter" onchange="renderSprayRecs()"></select>
+      </div>
+      <div id="spray-note" class="spray-note" style="display:none"></div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
+              <th>Date</th>
+              <th>Block</th>
               <th>Product</th>
-              <th class="chem-num">Net $</th>
-              <th class="chem-num">Share</th>
+              <th>Rate</th>
+              <th>Qty</th>
+              <th>Pest</th>
+              <th class="spray-num">Acres</th>
             </tr>
           </thead>
-          <tbody id="chem-products-body"></tbody>
+          <tbody id="spray-body"></tbody>
         </table>
       </div>
     </div>
@@ -1331,7 +1416,9 @@ let harvestData = [];
 let packoutData = [];
 let laborData = [];
 let nutrienData = [];
+let sprayData = [];
 let chemSelectedCat = null;
+let chemView = 'purchases';
 
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -1379,7 +1466,7 @@ function showSection(name, el) {
   if (name === 'harvest') updateCalendar();
   if (name === 'packout') filterPackout();
   if (name === 'labor') renderLabor();
-  if (name === 'chemicals') renderChemicals();
+  if (name === 'chemicals') renderChemicalsPage();
   if (name === 'maps') {
     initFarmMap();
     setTimeout(function() {
@@ -1779,6 +1866,14 @@ function updateCalendar() {
       laborByDay[p.d].push(d);
     }
   });
+  const sprayByDay = {};
+  sprayData.forEach(d => {
+    const p = calYmd(d.date);
+    if (p.y === year && (p.m - 1) === month) {
+      if (!sprayByDay[p.d]) sprayByDay[p.d] = [];
+      sprayByDay[p.d].push(d);
+    }
+  });
 
   let html = '<div class="cal-grid">';
   ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
@@ -1790,7 +1885,8 @@ function updateCalendar() {
   for (let day = 1; day <= daysInMonth; day++) {
     const harvest = harvestByDay[day] || [];
     const labor = laborByDay[day] || [];
-    if (harvest.length || labor.length) {
+    const sprays = sprayByDay[day] || [];
+    if (harvest.length || labor.length || sprays.length) {
       const varMap = {};
       let totalFB = 0;
       harvest.forEach(e => {
@@ -1810,13 +1906,23 @@ function updateCalendar() {
       const laborPills = Object.keys(workMap).map(w =>
         `<span class="cal-pill labor">${w}</span>`
       ).join('');
+      const pestSeen = {};
+      sprays.forEach(e => {
+        const pest = (e.pest || '').trim();
+        if (pest) pestSeen[pest.split(',')[0].trim()] = true;
+      });
+      const pestLabels = Object.keys(pestSeen);
+      const sprayPills = (pestLabels.length ? pestLabels : (sprays.length ? ['Spray'] : [])).map(lab =>
+        `<span class="cal-pill spray">${chemEsc(lab)}</span>`
+      ).join('');
       const foot = [];
       if (harvest.length) foot.push(totalFB.toLocaleString() + ' FB');
       if (labor.length) foot.push(labor.length + (labor.length === 1 ? ' job' : ' jobs'));
-      const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '');
+      if (sprays.length) foot.push(sprays.length + (sprays.length === 1 ? ' spray' : ' sprays'));
+      const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '') + (sprays.length ? ' has-spray' : '');
       html += `<div class="cal-cell has-data${extra}" onclick="showDayDetail(${day},${month},${year})">
         <div class="cal-day-num">${day}</div>
-        <div>${harvestPills}${laborPills}</div>
+        <div>${harvestPills}${laborPills}${sprayPills}</div>
         <div class="cal-fb">${foot.join(' · ')}</div>
       </div>`;
     } else {
@@ -1861,6 +1967,27 @@ function showDayDetail(day, month, year) {
     });
     const tot = labor.reduce((s,e) => s + (e.amount || 0), 0);
     html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td></td><td>${laborMoney(tot)}</td></tr>`;
+    html += '</tbody></table>';
+  }
+  const sprays = sprayData.filter(d => {
+    const p = calYmd(d.date);
+    return p.d === day && (p.m - 1) === month && p.y === year;
+  }).slice().sort(function(a, b) {
+    const ba = a.block == null ? 9999 : a.block;
+    const bb = b.block == null ? 9999 : b.block;
+    if (ba !== bb) return ba - bb;
+    return String(a.productShort || a.product || '').localeCompare(String(b.productShort || b.product || ''));
+  });
+  if (sprays.length) {
+    html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Spray recs</div>';
+    html += '<table class="modal-table"><thead><tr><th>Block</th><th>Product</th><th>Rate</th><th>Pest</th></tr></thead><tbody>';
+    sprays.forEach(e => {
+      const blk = e.block == null ? '—' : String(e.block);
+      const short = e.productShort || e.product || '';
+      const full = e.product || short;
+      const pest = e.pest ? chemEsc(e.pest) : '—';
+      html += '<tr><td>' + chemEsc(blk) + '</td><td title="' + chemEsc(full) + '">' + chemEsc(short) + '</td><td>' + chemEsc(e.rate || '—') + '</td><td>' + pest + '</td></tr>';
+    });
     html += '</tbody></table>';
   }
 
@@ -2168,7 +2295,7 @@ function loadNutrien() {
     })
     .then(function(rows) {
       nutrienData = Array.isArray(rows) ? rows : [];
-      if (document.getElementById('chemicals-section').classList.contains('active')) {
+      if (document.getElementById('chemicals-section').classList.contains('active') && chemView === 'purchases') {
         renderChemicals();
       }
     })
@@ -2177,9 +2304,206 @@ function loadNutrien() {
     });
 }
 
+function loadSprays() {
+  const url = new URL('sprays.json', document.baseURI).href;
+  fetch(url)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(rows) {
+      sprayData = Array.isArray(rows) ? rows : [];
+      updateCalendar();
+      if (document.getElementById('chemicals-section').classList.contains('active') && chemView === 'sprays') {
+        renderSprayRecs();
+      }
+    })
+    .catch(function() {
+      sprayData = [];
+    });
+}
+
+function sprayFmtNum(n) {
+  const v = Number(n);
+  if (!isFinite(v)) return '';
+  return Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+}
+
+function sprayQty(r) {
+  const s = sprayFmtNum(r.qty);
+  if (!s) return '—';
+  return r.unit ? s + ' ' + r.unit : s;
+}
+
+function sprayDateRange(rows) {
+  if (!rows.length) return '';
+  const dates = rows.map(function(r) { return String(r.date || '').slice(0, 10); }).filter(Boolean).sort();
+  const a = dates[0], b = dates[dates.length - 1];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    return months[m - 1] + ' ' + d;
+  }
+  const y1 = a.slice(0, 4), y2 = b.slice(0, 4);
+  if (a === b) return fmt(a) + ' ' + y1;
+  if (y1 === y2) return fmt(a) + '–' + fmt(b) + ' ' + y1;
+  return fmt(a) + ' ' + y1 + ' – ' + fmt(b) + ' ' + y2;
+}
+
+function initSprayFilters() {
+  const bsel = document.getElementById('spray-block-filter');
+  const psel = document.getElementById('spray-pest-filter');
+  const rsel = document.getElementById('spray-product-filter');
+  if (!bsel || !psel || !rsel) return;
+  const prevB = bsel.value, prevP = psel.value, prevR = rsel.value;
+
+  const blocks = [...new Set(sprayData.map(function(d) { return d.block; }).filter(function(b) { return b != null; }))].sort(function(a, b) { return a - b; });
+  const hasNull = sprayData.some(function(d) { return d.block == null; });
+  bsel.innerHTML = '<option value="all">All blocks</option>';
+  blocks.forEach(function(b) {
+    const o = document.createElement('option');
+    o.value = String(b);
+    o.textContent = String(b);
+    bsel.appendChild(o);
+  });
+  if (hasNull) {
+    const o = document.createElement('option');
+    o.value = 'none';
+    o.textContent = 'Unassigned';
+    bsel.appendChild(o);
+  }
+  if ([...bsel.options].some(function(o) { return o.value === prevB; })) bsel.value = prevB;
+
+  const pests = [...new Set(sprayData.map(function(d) { return d.pest || ''; }))].sort(function(a, b) {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  });
+  psel.innerHTML = '<option value="all">All pests</option>';
+  pests.forEach(function(pest) {
+    const o = document.createElement('option');
+    o.value = pest ? pest : '__fert__';
+    o.textContent = pest ? pest : 'Fertilizer / adjuvant';
+    psel.appendChild(o);
+  });
+  if ([...psel.options].some(function(o) { return o.value === prevP; })) psel.value = prevP;
+
+  const products = [...new Set(sprayData.map(function(d) { return d.productShort || d.product; }).filter(Boolean))].sort(function(a, b) { return a.localeCompare(b); });
+  rsel.innerHTML = '<option value="all">All products</option>';
+  products.forEach(function(name) {
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = name;
+    rsel.appendChild(o);
+  });
+  if ([...rsel.options].some(function(o) { return o.value === prevR; })) rsel.value = prevR;
+}
+
+function renderSprayRecs() {
+  const yearSel = document.getElementById('chem-year-filter');
+  const body = document.getElementById('spray-body');
+  const note = document.getElementById('spray-note');
+  const summary = document.getElementById('spray-summary');
+  if (!yearSel || !body) return;
+  initSprayFilters();
+  const year = parseInt(yearSel.value, 10);
+  const blockF = (document.getElementById('spray-block-filter') || {}).value || 'all';
+  const pestF = (document.getElementById('spray-pest-filter') || {}).value || 'all';
+  const prodF = (document.getElementById('spray-product-filter') || {}).value || 'all';
+
+  if (year !== 2026) {
+    if (summary) {
+      summary.innerHTML =
+        '<div><div class="chem-total-label">Spray recs</div>' +
+        '<div class="chem-total-value">0</div></div>';
+    }
+    if (note) {
+      note.style.display = 'block';
+      note.textContent = 'No spray recs for ' + year + '. Telus recommendations cover 2026 only.';
+    }
+    body.innerHTML = '<tr class="row-empty"><td colspan="7">No spray recs this year</td></tr>';
+    return;
+  }
+
+  if (note) { note.style.display = 'none'; note.textContent = ''; }
+
+  const rows = sprayData.filter(function(r) {
+    const y = parseInt(String(r.date || '').slice(0, 4), 10);
+    if (y !== year) return false;
+    if (blockF === 'none') {
+      if (r.block != null) return false;
+    } else if (blockF !== 'all' && String(r.block) !== blockF) {
+      return false;
+    }
+    if (pestF === '__fert__') {
+      if (r.pest) return false;
+    } else if (pestF !== 'all' && (r.pest || '') !== pestF) {
+      return false;
+    }
+    const short = r.productShort || r.product || '';
+    if (prodF !== 'all' && short !== prodF) return false;
+    return true;
+  }).slice().sort(function(a, b) {
+    const da = String(a.date || '');
+    const db = String(b.date || '');
+    if (da !== db) return db.localeCompare(da);
+    const ba = a.block == null ? 9999 : a.block;
+    const bb = b.block == null ? 9999 : b.block;
+    if (ba !== bb) return ba - bb;
+    return String(a.productShort || '').localeCompare(String(b.productShort || ''));
+  });
+
+  const uniqBlocks = new Set();
+  rows.forEach(function(r) { if (r.block != null) uniqBlocks.add(r.block); });
+  const range = sprayDateRange(rows);
+  if (summary) {
+    summary.innerHTML =
+      '<div><div class="chem-total-label">Recs</div><div class="chem-total-value">' + rows.length + '</div></div>' +
+      '<div><div class="chem-total-label">Date range</div><div class="chem-total-value" style="font-size:22px">' + chemEsc(range || '—') + '</div></div>' +
+      '<div><div class="chem-total-label">Unique blocks</div><div class="chem-total-value">' + uniqBlocks.size + '</div></div>';
+  }
+
+  body.innerHTML = rows.length
+    ? rows.map(function(r) {
+        const blk = r.block == null ? '—' : String(r.block);
+        const short = r.productShort || r.product || '';
+        const full = r.product || short;
+        const pest = r.pest ? chemEsc(r.pest) : '—';
+        const acres = sprayFmtNum(r.acres);
+        return '<tr>' +
+          '<td>' + laborFmtDate(r.date) + '</td>' +
+          '<td>' + chemEsc(blk) + '</td>' +
+          '<td title="' + chemEsc(full) + '">' + chemEsc(short) + '</td>' +
+          '<td>' + chemEsc(r.rate || '—') + '</td>' +
+          '<td class="spray-num">' + chemEsc(sprayQty(r)) + '</td>' +
+          '<td>' + pest + '</td>' +
+          '<td class="spray-num">' + (acres || '—') + '</td>' +
+          '</tr>';
+      }).join('')
+    : '<tr class="row-empty"><td colspan="7">No spray recs match these filters</td></tr>';
+}
+
 function onChemYearChange() {
   chemSelectedCat = null;
-  renderChemicals();
+  renderChemicalsPage();
+}
+
+function setChemView(view) {
+  chemView = view === 'sprays' ? 'sprays' : 'purchases';
+  const purchBtn = document.getElementById('chem-view-purchases');
+  const sprayBtn = document.getElementById('chem-view-sprays');
+  if (purchBtn) purchBtn.classList.toggle('active', chemView === 'purchases');
+  if (sprayBtn) sprayBtn.classList.toggle('active', chemView === 'sprays');
+  const purch = document.getElementById('chem-purchases-view');
+  const sprays = document.getElementById('chem-sprays-view');
+  if (purch) purch.classList.toggle('hidden', chemView === 'sprays');
+  if (sprays) sprays.classList.toggle('open', chemView === 'sprays');
+  renderChemicalsPage();
+}
+
+function renderChemicalsPage() {
+  if (chemView === 'sprays') renderSprayRecs();
+  else renderChemicals();
 }
 
 function selectChemCategory(cat) {
@@ -2299,6 +2623,7 @@ function renderChemicals() {
 }
 
 loadNutrien();
+loadSprays();
 
 </script>
 
