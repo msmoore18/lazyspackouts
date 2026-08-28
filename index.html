@@ -511,6 +511,15 @@
     margin-top: 2px;
   }
 
+  .cal-pill.labor {
+    background: #f4e4d0;
+    color: #8a4b12;
+  }
+
+  .cal-cell.has-labor:not(.has-harvest) {
+    background: linear-gradient(135deg, white 0%, #faf4ec 100%);
+  }
+
   /* ── MODAL ── */
   .modal-backdrop {
     display: none;
@@ -1145,7 +1154,7 @@
   <div class="brand">Lazy S Ranch</div>
   <div class="nav-tabs">
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
-    <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Harvest Calendar</div>
+    <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Calendar</div>
     <div class="nav-tab" data-section="labor" onclick="showSection('labor',this)">Contract Labor</div>
     <div class="nav-tab disabled">Financials</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
@@ -1156,7 +1165,7 @@
 
 <div class="mobile-menu" id="mobile-menu">
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
-  <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Harvest Calendar</div>
+  <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Calendar</div>
   <div class="mobile-menu-item" onclick="showSection('labor',this);toggleMobile()">Contract Labor</div>
   <div class="mobile-menu-item disabled">Financials</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
@@ -1204,7 +1213,7 @@
 
   <!-- HARVEST SECTION -->
   <div id="harvest-section" class="section">
-    <div class="page-title">Harvest Calendar</div>
+    <div class="page-title">Calendar</div>
     <div class="filter-bar">
       <span class="filter-label">Year</span>
       <select id="year-filter-cal" onchange="updateCalendar()"></select>
@@ -1421,11 +1430,14 @@ function initFilters() {
   const ypo = document.getElementById('year-filter-packout');
   if (ypo.options.length > 1) ypo.selectedIndex = 1;
 
-  const hYears = [...new Set(harvestData.map(d => new Date(d.Date).getFullYear()))].filter(y => y !== 2024).sort().reverse();
+  const calYears = [...new Set([
+    ...harvestData.map(d => parseInt(String(d.Date).slice(0,4), 10)),
+    ...laborData.map(d => parseInt(String(d.worked || d.paid).slice(0,4), 10)),
+  ])].filter(y => y && y !== 2024).sort().reverse();
   const yc = document.getElementById('year-filter-cal');
   yc.innerHTML = '';
-  hYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yc.appendChild(o); });
-  if (hYears.length) yc.value = hYears[0];
+  calYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yc.appendChild(o); });
+  if (calYears.length) yc.value = calYears[0];
 
   const blocks = [...new Set(packoutData.map(d => normBlock(d['Block ID'])))].sort((a,b) => {
     const ai = BLOCK_ORDER.indexOf(a), bi = BLOCK_ORDER.indexOf(b);
@@ -1735,6 +1747,11 @@ function toggleBlock(bid) {
 
 // ── HARVEST CALENDAR ─────────────────────────────────────────────────────────
 
+function calYmd(s) {
+  const [y, m, d] = String(s || '').slice(0, 10).split('-').map(Number);
+  return { y: y || 0, m: m || 0, d: d || 0 };
+}
+
 function updateCalendar() {
   const year  = parseInt(document.getElementById('year-filter-cal').value);
   const month = currentMonth;
@@ -1744,12 +1761,20 @@ function updateCalendar() {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const byDay = {};
+  const harvestByDay = {};
   harvestData.forEach(d => {
-    const [dy, dm, dd] = d.Date.split('-').map(Number);
-    if (dy === year && (dm - 1) === month) {
-      if (!byDay[dd]) byDay[dd] = [];
-      byDay[dd].push(d);
+    const p = calYmd(d.Date);
+    if (p.y === year && (p.m - 1) === month) {
+      if (!harvestByDay[p.d]) harvestByDay[p.d] = [];
+      harvestByDay[p.d].push(d);
+    }
+  });
+  const laborByDay = {};
+  laborData.forEach(d => {
+    const p = calYmd(d.worked || d.paid);
+    if (p.y === year && (p.m - 1) === month) {
+      if (!laborByDay[p.d]) laborByDay[p.d] = [];
+      laborByDay[p.d].push(d);
     }
   });
 
@@ -1761,23 +1786,36 @@ function updateCalendar() {
   for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const entries = byDay[day];
-    if (entries) {
+    const harvest = harvestByDay[day] || [];
+    const labor = laborByDay[day] || [];
+    if (harvest.length || labor.length) {
       const varMap = {};
       let totalFB = 0;
-      entries.forEach(e => {
+      harvest.forEach(e => {
         const v = e.Variety;
         varMap[v] = (varMap[v] || 0) + (e.FB || 0);
         totalFB += (e.FB || 0);
       });
-      const pills = Object.entries(varMap).map(([v, fb]) => {
+      const harvestPills = Object.entries(varMap).map(([v, fb]) => {
         const cls = v.replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
         return `<span class="cal-pill ${cls}">${v.replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT')}</span>`;
       }).join('');
-      html += `<div class="cal-cell has-data" onclick="showDayDetail(${day},${month},${year})">
+      const workMap = {};
+      labor.forEach(e => {
+        const w = e.work || 'Labor';
+        workMap[w] = (workMap[w] || 0) + 1;
+      });
+      const laborPills = Object.keys(workMap).map(w =>
+        `<span class="cal-pill labor">${w}</span>`
+      ).join('');
+      const foot = [];
+      if (harvest.length) foot.push(totalFB.toLocaleString() + ' FB');
+      if (labor.length) foot.push(labor.length + (labor.length === 1 ? ' job' : ' jobs'));
+      const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '');
+      html += `<div class="cal-cell has-data${extra}" onclick="showDayDetail(${day},${month},${year})">
         <div class="cal-day-num">${day}</div>
-        <div>${pills}</div>
-        <div class="cal-fb">${totalFB.toLocaleString()} FB</div>
+        <div>${harvestPills}${laborPills}</div>
+        <div class="cal-fb">${foot.join(' · ')}</div>
       </div>`;
     } else {
       html += `<div class="cal-cell"><div class="cal-day-num">${day}</div></div>`;
@@ -1789,23 +1827,40 @@ function updateCalendar() {
 }
 
 function showDayDetail(day, month, year) {
-  const entries = harvestData.filter(d => {
-    const [dy, dm, dd] = d.Date.split('-').map(Number);
-    return dd === day && (dm - 1) === month && dy === year;
+  const harvest = harvestData.filter(d => {
+    const p = calYmd(d.Date);
+    return p.d === day && (p.m - 1) === month && p.y === year;
+  });
+  const labor = laborData.filter(d => {
+    const p = calYmd(d.worked || d.paid);
+    return p.d === day && (p.m - 1) === month && p.y === year;
   });
 
   const dt = new Date(year, month, day);
   const label = dt.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 
-  let html = `<div class="modal-title">Harvest — ${label}</div>`;
-  html += '<table class="modal-table"><thead><tr><th>Block</th><th>Variety</th><th>Bins</th><th>Field Boxes</th></tr></thead><tbody>';
-  entries.forEach(e => {
-    html += `<tr><td>Block ${e.Block}</td><td>${e.Variety}</td><td>${e.Bins}</td><td>${(e.FB||0).toLocaleString()}</td></tr>`;
-  });
-  const totalBins = entries.reduce((s,e) => s + (e.Bins||0), 0);
-  const totalFB   = entries.reduce((s,e) => s + (e.FB||0), 0);
-  html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td>${totalBins.toFixed(1)}</td><td>${totalFB.toLocaleString()}</td></tr>`;
-  html += '</tbody></table>';
+  let html = `<div class="modal-title">${label}</div>`;
+  if (harvest.length) {
+    html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Harvest</div>';
+    html += '<table class="modal-table"><thead><tr><th>Block</th><th>Variety</th><th>Bins</th><th>Field Boxes</th></tr></thead><tbody>';
+    harvest.forEach(e => {
+      html += `<tr><td>Block ${e.Block}</td><td>${e.Variety}</td><td>${e.Bins}</td><td>${(e.FB||0).toLocaleString()}</td></tr>`;
+    });
+    const totalBins = harvest.reduce((s,e) => s + (e.Bins||0), 0);
+    const totalFB   = harvest.reduce((s,e) => s + (e.FB||0), 0);
+    html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td>${totalBins.toFixed(1)}</td><td>${totalFB.toLocaleString()}</td></tr>`;
+    html += '</tbody></table>';
+  }
+  if (labor.length) {
+    html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Contract Labor</div>';
+    html += '<table class="modal-table"><thead><tr><th>Vendor</th><th>Block</th><th>Work</th><th>Amount</th></tr></thead><tbody>';
+    labor.forEach(e => {
+      html += `<tr><td>${laborShortVendor(e.vendor)}</td><td>${e.block || '—'}</td><td>${e.work || '—'}</td><td>${laborMoney(e.amount || 0)}</td></tr>`;
+    });
+    const tot = labor.reduce((s,e) => s + (e.amount || 0), 0);
+    html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td></td><td>${laborMoney(tot)}</td></tr>`;
+    html += '</tbody></table>';
+  }
 
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('modal').classList.add('open');
