@@ -521,9 +521,30 @@
   }
 
   .cal-pill.spray {
-    background: #d7efe6;
-    color: #0d5c4d;
+    background: #1a7a64;
+    color: #fff;
+    font-weight: 600;
   }
+
+  .cal-legend {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-light);
+    margin: 8px 0 0;
+  }
+  .cal-legend .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: -1px;
+  }
+  .cal-legend .swatch.harvest { background: #4a7c59; }
+  .cal-legend .swatch.labor { background: #f4e4d0; border: 1px solid #c9a882; }
+  .cal-legend .swatch.spray { background: #1a7a64; }
 
   .cal-cell.has-spray:not(.has-harvest):not(.has-labor) {
     background: linear-gradient(135deg, white 0%, #eef7f3 100%);
@@ -1272,6 +1293,11 @@
         <span id="month-label" class="month-display"></span>
         <button class="month-arrow" onclick="shiftMonth(1)">&#8594;</button>
       </div>
+      <div class="cal-legend">
+        <span><span class="swatch harvest"></span>Harvest</span>
+        <span><span class="swatch labor"></span>Labor</span>
+        <span><span class="swatch spray"></span>Spray</span>
+      </div>
     </div>
     <div id="cal-content"></div>
   </div>
@@ -1353,11 +1379,10 @@
     </div>
     <div id="chem-sprays-view">
       <div id="spray-summary" class="chem-summary"></div>
+      <div id="spray-cat-grid" class="chem-cat-grid"></div>
       <div class="filter-bar" id="spray-filter-bar">
         <span class="filter-label">Block</span>
         <select id="spray-block-filter" onchange="renderSprayRecs()"></select>
-        <span class="filter-label" style="margin-left:8px">Pest</span>
-        <select id="spray-pest-filter" onchange="renderSprayRecs()"></select>
         <span class="filter-label" style="margin-left:8px">Product</span>
         <select id="spray-product-filter" onchange="renderSprayRecs()"></select>
       </div>
@@ -1419,6 +1444,7 @@ let nutrienData = [];
 let sprayData = [];
 let chemSelectedCat = null;
 let chemView = 'purchases';
+let spraySelectedCat = null;
 
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -1522,6 +1548,7 @@ function initFilters() {
   const calYears = [...new Set([
     ...harvestData.map(d => parseInt(String(d.Date).slice(0,4), 10)),
     ...laborData.map(d => parseInt(String(d.worked || d.paid).slice(0,4), 10)),
+    ...sprayData.map(d => parseInt(String(d.date).slice(0,4), 10)),
   ])].filter(y => y && y !== 2024).sort().reverse();
   const yc = document.getElementById('year-filter-cal');
   yc.innerHTML = '';
@@ -1906,13 +1933,13 @@ function updateCalendar() {
       const laborPills = Object.keys(workMap).map(w =>
         `<span class="cal-pill labor">${w}</span>`
       ).join('');
-      const pestSeen = {};
+      const chemSeen = [];
       sprays.forEach(e => {
-        const pest = (e.pest || '').trim();
-        if (pest) pestSeen[pest.split(',')[0].trim()] = true;
+        const lab = e.productShort || e.product;
+        if (lab && chemSeen.indexOf(lab) < 0) chemSeen.push(lab);
       });
-      const pestLabels = Object.keys(pestSeen);
-      const sprayPills = (pestLabels.length ? pestLabels : (sprays.length ? ['Spray'] : [])).map(lab =>
+      chemSeen.sort(function(a, b) { return a.localeCompare(b); });
+      const sprayPills = chemSeen.map(lab =>
         `<span class="cal-pill spray">${chemEsc(lab)}</span>`
       ).join('');
       const foot = [];
@@ -1922,7 +1949,7 @@ function updateCalendar() {
       const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '') + (sprays.length ? ' has-spray' : '');
       html += `<div class="cal-cell has-data${extra}" onclick="showDayDetail(${day},${month},${year})">
         <div class="cal-day-num">${day}</div>
-        <div>${harvestPills}${laborPills}${sprayPills}</div>
+        <div>${sprayPills}${harvestPills}${laborPills}</div>
         <div class="cal-fb">${foot.join(' · ')}</div>
       </div>`;
     } else {
@@ -2313,6 +2340,36 @@ function loadSprays() {
     })
     .then(function(rows) {
       sprayData = Array.isArray(rows) ? rows : [];
+      if (sprayData.length) {
+        const yearSel = document.getElementById('year-filter-cal');
+        const years = [...new Set(sprayData.map(function(d) { return parseInt(String(d.date).slice(0,4), 10); }))].filter(Boolean).sort(function(a,b){ return b-a; });
+        if (yearSel && years.length) {
+          years.forEach(function(y) {
+            if (![...yearSel.options].some(function(o) { return parseInt(o.value, 10) === y; })) {
+              const o = document.createElement('option');
+              o.value = String(y);
+              o.textContent = String(y);
+              yearSel.appendChild(o);
+            }
+          });
+        }
+        const y = yearSel ? parseInt(yearSel.value, 10) : 0;
+        const hasThisMonth = sprayData.some(function(d) {
+          const p = calYmd(d.date);
+          return p.y === y && (p.m - 1) === currentMonth;
+        });
+        if (!hasThisMonth) {
+          let latest = '';
+          sprayData.forEach(function(d) { if (d.date > latest) latest = d.date; });
+          if (latest) {
+            const p = calYmd(latest);
+            if (yearSel && [...yearSel.options].some(function(o) { return parseInt(o.value, 10) === p.y; })) {
+              yearSel.value = String(p.y);
+            }
+            currentMonth = p.m - 1;
+          }
+        }
+      }
       updateCalendar();
       if (document.getElementById('chemicals-section').classList.contains('active') && chemView === 'sprays') {
         renderSprayRecs();
@@ -2352,10 +2409,9 @@ function sprayDateRange(rows) {
 
 function initSprayFilters() {
   const bsel = document.getElementById('spray-block-filter');
-  const psel = document.getElementById('spray-pest-filter');
   const rsel = document.getElementById('spray-product-filter');
-  if (!bsel || !psel || !rsel) return;
-  const prevB = bsel.value, prevP = psel.value, prevR = rsel.value;
+  if (!bsel || !rsel) return;
+  const prevB = bsel.value, prevR = rsel.value;
 
   const blocks = [...new Set(sprayData.map(function(d) { return d.block; }).filter(function(b) { return b != null; }))].sort(function(a, b) { return a - b; });
   const hasNull = sprayData.some(function(d) { return d.block == null; });
@@ -2373,20 +2429,6 @@ function initSprayFilters() {
     bsel.appendChild(o);
   }
   if ([...bsel.options].some(function(o) { return o.value === prevB; })) bsel.value = prevB;
-
-  const pests = [...new Set(sprayData.map(function(d) { return d.pest || ''; }))].sort(function(a, b) {
-    if (!a) return 1;
-    if (!b) return -1;
-    return a.localeCompare(b);
-  });
-  psel.innerHTML = '<option value="all">All pests</option>';
-  pests.forEach(function(pest) {
-    const o = document.createElement('option');
-    o.value = pest ? pest : '__fert__';
-    o.textContent = pest ? pest : 'Fertilizer / adjuvant';
-    psel.appendChild(o);
-  });
-  if ([...psel.options].some(function(o) { return o.value === prevP; })) psel.value = prevP;
 
   const products = [...new Set(sprayData.map(function(d) { return d.productShort || d.product; }).filter(Boolean))].sort(function(a, b) { return a.localeCompare(b); });
   rsel.innerHTML = '<option value="all">All products</option>';
@@ -2408,7 +2450,6 @@ function renderSprayRecs() {
   initSprayFilters();
   const year = parseInt(yearSel.value, 10);
   const blockF = (document.getElementById('spray-block-filter') || {}).value || 'all';
-  const pestF = (document.getElementById('spray-pest-filter') || {}).value || 'all';
   const prodF = (document.getElementById('spray-product-filter') || {}).value || 'all';
 
   if (year !== 2026) {
@@ -2422,6 +2463,8 @@ function renderSprayRecs() {
       note.textContent = 'No spray recs for ' + year + '. Telus recommendations cover 2026 only.';
     }
     body.innerHTML = '<tr class="row-empty"><td colspan="7">No spray recs this year</td></tr>';
+    const emptyGrid = document.getElementById('spray-cat-grid');
+    if (emptyGrid) emptyGrid.innerHTML = '';
     return;
   }
 
@@ -2435,11 +2478,7 @@ function renderSprayRecs() {
     } else if (blockF !== 'all' && String(r.block) !== blockF) {
       return false;
     }
-    if (pestF === '__fert__') {
-      if (r.pest) return false;
-    } else if (pestF !== 'all' && (r.pest || '') !== pestF) {
-      return false;
-    }
+    if (spraySelectedCat && (r.category || '') !== spraySelectedCat) return false;
     const short = r.productShort || r.product || '';
     if (prodF !== 'all' && short !== prodF) return false;
     return true;
@@ -2453,12 +2492,39 @@ function renderSprayRecs() {
     return String(a.productShort || '').localeCompare(String(b.productShort || ''));
   });
 
+  const yearRows = sprayData.filter(function(r) {
+    return parseInt(String(r.date || '').slice(0, 4), 10) === year;
+  });
+  const byCat = {};
+  yearRows.forEach(function(r) {
+    const c = r.category || 'Uncategorized';
+    byCat[c] = (byCat[c] || 0) + 1;
+  });
+  const cats = Object.keys(byCat).sort(function(a, b) { return byCat[b] - byCat[a]; });
+  const catDen = yearRows.length || 1;
+  const grid = document.getElementById('spray-cat-grid');
+  if (grid) {
+    grid.innerHTML = cats.map(function(c) {
+      const sel = spraySelectedCat === c ? ' selected' : '';
+      const pct = 100 * byCat[c] / catDen;
+      return '<div class="chem-cat-card' + sel + '" data-cat="' + chemEsc(c) + '">' +
+        '<div class="chem-cat-name">' + chemEsc(c) + '</div>' +
+        '<div class="chem-cat-dollars">' + byCat[c] + ' recs</div>' +
+        '<div class="chem-cat-pct">' + pct.toFixed(1) + '% of recs</div></div>';
+    }).join('');
+    grid.onclick = function(ev) {
+      var card = ev.target.closest('.chem-cat-card');
+      if (!card) return;
+      selectSprayCategory(card.getAttribute('data-cat'));
+    };
+  }
+
   const uniqBlocks = new Set();
   rows.forEach(function(r) { if (r.block != null) uniqBlocks.add(r.block); });
-  const range = sprayDateRange(rows);
+  const range = sprayDateRange(yearRows);
   if (summary) {
     summary.innerHTML =
-      '<div><div class="chem-total-label">Recs</div><div class="chem-total-value">' + rows.length + '</div></div>' +
+      '<div><div class="chem-total-label">Recs</div><div class="chem-total-value">' + yearRows.length + '</div></div>' +
       '<div><div class="chem-total-label">Date range</div><div class="chem-total-value" style="font-size:22px">' + chemEsc(range || '—') + '</div></div>' +
       '<div><div class="chem-total-label">Unique blocks</div><div class="chem-total-value">' + uniqBlocks.size + '</div></div>';
   }
@@ -2485,7 +2551,13 @@ function renderSprayRecs() {
 
 function onChemYearChange() {
   chemSelectedCat = null;
+  spraySelectedCat = null;
   renderChemicalsPage();
+}
+
+function selectSprayCategory(cat) {
+  spraySelectedCat = (cat && spraySelectedCat === cat) ? null : cat;
+  renderSprayRecs();
 }
 
 function setChemView(view) {
