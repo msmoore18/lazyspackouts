@@ -1332,7 +1332,7 @@
       </div>
       <div class="cal-legend">
         <span><span class="swatch harvest"></span>Harvest</span>
-        <span><span class="swatch labor"></span>Labor</span>
+        <span><span class="swatch labor"></span>Contract labor $</span>
         <span><span class="swatch spray"></span>Spray</span>
       </div>
     </div>
@@ -2106,7 +2106,7 @@ function updateCalendar() {
       if (harvest.length) foot.push(totalFB.toLocaleString() + ' FB');
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
-        foot.push('$' + Math.round(laborTot).toLocaleString('en-US'));
+        foot.push('Labor $' + Math.round(laborTot).toLocaleString('en-US'));
       }
       if (sprays.length) foot.push(sprays.length + (sprays.length === 1 ? ' spray' : ' sprays'));
       const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '') + (sprays.length ? ' has-spray' : '');
