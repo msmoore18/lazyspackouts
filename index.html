@@ -2070,16 +2070,26 @@ function updateCalendar() {
     const labor = laborByDay[day] || [];
     const sprays = sprayByDay[day] || [];
     if (harvest.length || labor.length || sprays.length) {
-      const varMap = {};
-      let totalFB = 0;
+      const harvestRows = {};
+      let totalBins = 0;
       harvest.forEach(e => {
-        const v = e.Variety;
-        varMap[v] = (varMap[v] || 0) + (e.FB || 0);
-        totalFB += (e.FB || 0);
+        const id = laborBlockId(e.Block) || String(e.Block || '').trim();
+        const v = e.Variety || '';
+        const bins = Number(e.Bins) || 0;
+        totalBins += bins;
+        const key = id + '\t' + v;
+        if (!harvestRows[key]) harvestRows[key] = { id: id, variety: v, bins: 0 };
+        harvestRows[key].bins += bins;
       });
-      const harvestPills = Object.entries(varMap).map(([v, fb]) => {
-        const cls = v.replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
-        return `<span class="cal-pill ${cls}">${v.replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT')}</span>`;
+      const harvestPills = Object.keys(harvestRows).sort(function(a, b) {
+        return sortBlockIds(harvestRows[a].id, harvestRows[b].id);
+      }).map(function(key) {
+        const row = harvestRows[key];
+        const vshort = String(row.variety).replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT');
+        const btxt = (Math.round(row.bins * 10) / 10).toLocaleString('en-US');
+        const cls = String(row.variety).replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
+        const label = (row.id ? ('Blk ' + row.id + ': ') : '') + vshort + ' ' + btxt;
+        return '<span class="cal-pill ' + cls + '">' + chemEsc(label) + '</span>';
       }).join('');
       const laborByBlock = {};
       labor.forEach(e => {
@@ -2103,7 +2113,10 @@ function updateCalendar() {
         `<span class="cal-pill spray">${chemEsc(lab)}</span>`
       ).join('');
       const foot = [];
-      if (harvest.length) foot.push(totalFB.toLocaleString() + ' FB');
+      if (harvest.length) {
+        const btxt = (Math.round(totalBins * 10) / 10).toLocaleString('en-US');
+        foot.push(btxt + (Math.abs(totalBins - 1) < 0.05 ? ' bin' : ' bins'));
+      }
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
         foot.push('Contract Labor $' + Math.round(laborTot).toLocaleString('en-US'));
