@@ -3676,51 +3676,71 @@ function renderFinancials() {
   const rateNames = ['$ / Bin (Actual)', '$/Bin (Est)', '$ / Bin', 'Adjusted $/Bin'];
   const revNames = ['Revenue (Actual)', 'Adj Revenue (Est)', 'Revenue (Est)', 'Estimated Revenue', 'Total Revenue', 'Checks Received'];
 
-  const rows = [];
+  const cols = [];
   financialsRevenue.blocks.forEach(function(b) {
     if (b.kind === 'old' && !finBlockHasNumbers(rec, b.key)) return;
     if ((b.kind === 'other' || b.kind === 'olives') && !finBlockHasNonZero(rec, b.key)) return;
     if (b.kind === 'total') return;
-    rows.push(b);
+    cols.push(b);
   });
   const totalBlk = financialsRevenue.blocks.find(function(b) { return b.kind === 'total'; });
-  if (totalBlk && finBlockHasNumbers(rec, totalBlk.key)) rows.push(totalBlk);
+  if (totalBlk && finBlockHasNumbers(rec, totalBlk.key)) cols.push(totalBlk);
 
   const displayName = function(b) {
     if (b.kind === 'total' || b.kind === 'other' || b.kind === 'olives') return b.name;
     return b.name.replace(/^block\s+/i, '');
   };
 
-  head.innerHTML = '<tr><th>Block</th><th>Variety</th><th>Acres</th><th>Bins</th><th>$/Bin</th><th>Revenue</th></tr>';
+  head.innerHTML = '<tr><th></th>' + cols.map(function(b) {
+    return '<th>' + finEsc(displayName(b)) + '</th>';
+  }).join('') + '</tr>';
 
-  let ranchRev = 0;
-  let ranchBins = 0;
-  let anyRev = false;
-  let anyBins = false;
+  function metricRow(label, cells) {
+    return '<tr><td>' + finEsc(label) + '</td>' + cells.join('') + '</tr>';
+  }
+  function numCell(kind, n, extra) {
+    const cls = 'fin-num' + (kind === 'money' ? ' fin-money' : '') + (extra || '');
+    return '<td class="' + cls + '">' + (n == null ? '—' : finFmt(kind, n)) + '</td>';
+  }
 
-  body.innerHTML = rows.map(function(b) {
-    const trClass = b.kind === 'total' ? ' class="row-total"' : '';
-    const acres = b.acres == null ? '—' : finFmt('rate', b.acres);
-    const bins = firstBlockVal(binsNames, b.key);
+  const varietyCells = cols.map(function(b) {
+    const v = b.kind === 'total' ? '' : (b.variety || '');
+    return '<td>' + finEsc(v) + '</td>';
+  });
+  const acresCells = cols.map(function(b) {
+    return numCell('rate', b.acres);
+  });
+  const binsCells = cols.map(function(b) {
+    return numCell('bins', firstBlockVal(binsNames, b.key));
+  });
+  const rateCells = cols.map(function(b) {
     let rate = firstBlockVal(rateNames, b.key);
+    const bins = firstBlockVal(binsNames, b.key);
     const rev = firstBlockVal(revNames, b.key);
     if (rate == null && rev != null && bins) rate = rev / bins;
-    if (b.kind !== 'total') {
-      if (rev != null) { ranchRev += rev; anyRev = true; }
-      if (bins != null) { ranchBins += bins; anyBins = true; }
-    }
-    return '<tr' + trClass + '>' +
-      '<td>' + finEsc(displayName(b)) + '</td>' +
-      '<td>' + finEsc(b.kind === 'total' ? '' : (b.variety || '')) + '</td>' +
-      '<td class="fin-num">' + acres + '</td>' +
-      '<td class="fin-num">' + (bins == null ? '—' : finFmt('bins', bins)) + '</td>' +
-      '<td class="fin-num">' + (rate == null ? '—' : finFmt('money', rate)) + '</td>' +
-      '<td class="fin-num fin-money">' + (rev == null ? '—' : finFmt('money', rev)) + '</td>' +
-      '</tr>';
-  }).join('');
+    return numCell('money', rate);
+  });
+  const revCells = cols.map(function(b) {
+    return numCell('money', firstBlockVal(revNames, b.key));
+  });
+
+  body.innerHTML =
+    metricRow('Variety', varietyCells) +
+    metricRow('Acres', acresCells) +
+    metricRow('Bins', binsCells) +
+    metricRow('$/Bin', rateCells) +
+    metricRow('Revenue', revCells);
 
   const totRev = totalBlk ? firstBlockVal(revNames, totalBlk.key) : null;
   const totBins = totalBlk ? firstBlockVal(binsNames, totalBlk.key) : null;
+  let ranchRev = 0, ranchBins = 0, anyRev = false, anyBins = false;
+  cols.forEach(function(b) {
+    if (b.kind === 'total') return;
+    const rev = firstBlockVal(revNames, b.key);
+    const bins = firstBlockVal(binsNames, b.key);
+    if (rev != null) { ranchRev += rev; anyRev = true; }
+    if (bins != null) { ranchBins += bins; anyBins = true; }
+  });
   const showRev = totRev != null ? totRev : (anyRev ? ranchRev : null);
   const showBins = totBins != null ? totBins : (anyBins ? ranchBins : null);
   let showRate = totalBlk ? firstBlockVal(rateNames, totalBlk.key) : null;
@@ -4481,7 +4501,7 @@ loadSprays();
 (function autoLoad() {
   const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
   const finUrl = new URL('financials-revenue.json', document.baseURI);
-  finUrl.searchParams.set('v', '4');
+  finUrl.searchParams.set('v', '5');
 
   function showManualUpload(msg) {
     document.getElementById('auto-load-ui').style.display = 'none';
