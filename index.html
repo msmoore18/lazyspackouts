@@ -2594,13 +2594,13 @@ function showDayDetail(day, month, year) {
   });
   if (sprays.length) {
     html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Spray recs</div>';
-    html += '<table class="modal-table"><thead><tr><th>Block</th><th>Product</th><th>Rate</th><th>Pest</th></tr></thead><tbody>';
+    html += '<table class="modal-table"><thead><tr><th>Block</th><th>Product</th><th>Rate</th><th>Category</th></tr></thead><tbody>';
     sprays.forEach(e => {
       const blk = e.block == null ? '—' : String(e.block);
       const short = e.productShort || e.product || '';
       const full = e.product || short;
-      const pest = e.pest ? chemEsc(e.pest) : '—';
-      html += '<tr><td>' + chemEsc(blk) + '</td><td title="' + chemEsc(full) + '">' + chemEsc(short) + '</td><td>' + chemEsc(e.rate || '—') + '</td><td>' + pest + '</td></tr>';
+      const cat = e.category ? chemEsc(e.category) : '—';
+      html += '<tr><td>' + chemEsc(blk) + '</td><td title="' + chemEsc(full) + '">' + chemEsc(short) + '</td><td>' + chemEsc(e.rate || '—') + '</td><td>' + cat + '</td></tr>';
     });
     html += '</tbody></table>';
   }
