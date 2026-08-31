@@ -2113,10 +2113,6 @@ function updateCalendar() {
         `<span class="cal-pill spray">${chemEsc(lab)}</span>`
       ).join('');
       const foot = [];
-      if (harvest.length) {
-        const btxt = (Math.round(totalBins * 10) / 10).toLocaleString('en-US');
-        foot.push(btxt + (Math.abs(totalBins - 1) < 0.05 ? ' bin' : ' bins'));
-      }
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
         foot.push('Contract Labor $' + Math.round(laborTot).toLocaleString('en-US'));
