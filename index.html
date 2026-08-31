@@ -2088,7 +2088,7 @@ function updateCalendar() {
         const vshort = String(row.variety).replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT');
         const btxt = (Math.round(row.bins * 10) / 10).toLocaleString('en-US');
         const cls = String(row.variety).replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
-        const label = (row.id ? ('Blk ' + row.id + ': ') : '') + vshort + ' ' + btxt;
+        const label = (row.id ? ('Blk ' + row.id + ': ') : '') + vshort + ' Bins: ' + btxt;
         return '<span class="cal-pill ' + cls + '">' + chemEsc(label) + '</span>';
       }).join('');
       const laborByBlock = {};
