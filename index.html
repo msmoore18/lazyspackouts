@@ -1291,46 +1291,8 @@
   }
   #water-section .chem-compare.up { color: #c62828; }
   #water-section .chem-compare.down { color: #2e7d32; }
-  #water-section .chem-cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-    margin-bottom: 22px;
-  }
-  #water-section .chem-cat-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    user-select: none;
-  }
-  #water-section .chem-cat-card:hover {
-    border-color: var(--mid);
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-  }
-  #water-section .chem-cat-card.selected {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
-  #water-section .chem-cat-name {
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--text);
-    margin-bottom: 8px;
-  }
-  #water-section .chem-cat-dollars {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--dark);
-  }
-  #water-section .chem-cat-pct {
-    font-size: 12px;
-    color: var(--text-light);
-    margin-top: 2px;
+  #water-section .water-metric {
+    min-width: 140px;
   }
   #water-section .chem-chart-wrap {
     background: var(--card);
@@ -1635,14 +1597,9 @@
         <option value="2026" selected>2026 YTD</option>
       </select>
       <span class="filter-hint">Mar–Feb</span>
-      <span class="filter-label" style="margin-left:8px">Outlet</span>
-      <select id="water-outlet-filter" onchange="onWaterOutletChange()">
-        <option value="">All</option>
-      </select>
       <span class="filter-hint">Water year starts March. Crop-year bar still filters dates when set.</span>
     </div>
     <div id="water-summary" class="chem-summary"></div>
-    <div id="water-outlet-grid" class="chem-cat-grid"></div>
     <div class="chem-chart-wrap">
       <div id="water-chart-title" class="chem-chart-title">Monthly use (acre-feet)</div>
       <div class="water-legend">
@@ -1693,7 +1650,7 @@ let chemSelectedCat = null;
 let chemView = 'purchases';
 let spraySelectedCat = null;
 let waterData = [];
-let waterSelectedOutlet = null;
+let waterSupply = [];
 const SPRAY_CATS = [
   'Fertilizer',
   'Insecticide',
@@ -2716,6 +2673,32 @@ function parseWorkbook(wb) {
       });
   }
 
+  waterSupply = [];
+  const sws = wb.Sheets['WaterSupply'];
+  if (sws) {
+    const sRows = XLSX.utils.sheet_to_json(sws, { raw: true, defval: null });
+    waterSupply = sRows
+      .filter(r => r['WaterYear'] != null && r['WaterYear'] !== '')
+      .map(r => {
+        let dateStr = r['StatementDate'];
+        if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
+        if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
+        if (typeof dateStr === 'string' && dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            const [mo, dy, yr] = parts;
+            dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+          }
+        }
+        dateStr = dateStr ? String(dateStr).slice(0, 10) : '';
+        return {
+          WaterYear: parseInt(r['WaterYear'], 10),
+          SupplyAF: parseFloat(r['SupplyAF']) || 0,
+          StatementDate: dateStr,
+        };
+      });
+  }
+
   // Boot the dashboard
   initFilters();
   document.getElementById('col-harvest').classList.add('col-hidden');
@@ -3218,19 +3201,6 @@ function onWaterYearChange() {
   renderWater();
 }
 
-function onWaterOutletChange() {
-  const sel = document.getElementById('water-outlet-filter');
-  waterSelectedOutlet = sel && sel.value ? sel.value : null;
-  renderWater();
-}
-
-function selectWaterOutlet(outlet) {
-  waterSelectedOutlet = (outlet && waterSelectedOutlet === outlet) ? null : outlet;
-  const sel = document.getElementById('water-outlet-filter');
-  if (sel) sel.value = waterSelectedOutlet || '';
-  renderWater();
-}
-
 function renderWater() {
   const yearSel = document.getElementById('water-year-filter');
   const summary = document.getElementById('water-summary');
@@ -3244,25 +3214,13 @@ function renderWater() {
   const yearRows = waterData.filter(function(r) { return r.WaterYear === year; });
   const rows = yearRows.filter(function(r) { return dateInRange(r.Date); });
 
-  const outlets = [];
-  waterData.forEach(function(r) {
-    if (r.Outlet && outlets.indexOf(r.Outlet) === -1) outlets.push(r.Outlet);
-  });
-  outlets.sort();
-  const outSel = document.getElementById('water-outlet-filter');
-  if (outSel) {
-    const prev = waterSelectedOutlet || '';
-    outSel.innerHTML = '<option value="">All</option>' + outlets.map(function(o) {
-      return '<option value="' + chemEsc(o) + '"' + (o === prev ? ' selected' : '') + '>' + chemEsc(o) + '</option>';
-    }).join('');
-    if (prev && outlets.indexOf(prev) === -1) {
-      waterSelectedOutlet = null;
-      outSel.value = '';
-    }
-  }
-
-  const total = rows.reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
+  const used = rows.reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
+  const allUsed = yearRows.reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
   const pump = rows.reduce(function(s, r) { return s + (r.PumpingAmount || 0); }, 0);
+
+  const supplyRow = waterSupply.filter(function(s) { return s.WaterYear === year; })[0];
+  const supply = supplyRow ? supplyRow.SupplyAF : null;
+  const remaining = supply == null ? null : supply - allUsed;
 
   const monthSet = {};
   rows.forEach(function(r) { monthSet[r.Month] = true; });
@@ -3294,7 +3252,7 @@ function renderWater() {
       const a = selectedMonths[0], b = selectedMonths[selectedMonths.length - 1];
       spanLabel = a === b ? MONTHS[a] : (MONTHS[a] + '–' + MONTHS[b]);
     }
-    const diff = total - histTotal;
+    const diff = used - histTotal;
     const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
     const sign = diff > 0 ? '+' : '';
     let pctBit = '';
@@ -3312,47 +3270,28 @@ function renderWater() {
     ? (formatRangeLabel(range) + ' use')
     : (year === 2026 ? '2026 YTD use' : year + ' water year');
 
+  const supplyHtml = supply == null
+    ? '—'
+    : (waterFmtAf(supply) + ' AF');
+  const remainHtml = remaining == null
+    ? '—'
+    : (waterFmtAf(remaining) + ' AF');
+
   summary.innerHTML =
-    '<div><div class="chem-total-label">' + useLabel + '</div>' +
-    '<div class="chem-total-value">' + waterFmtAf(total) + ' AF</div>' +
-    '<div class="water-pumping">Pumping ' + chemMoney(pump) + '</div></div>' +
-    compareHtml;
+    '<div class="water-metric"><div class="chem-total-label">' + useLabel + '</div>' +
+    '<div class="chem-total-value">' + waterFmtAf(used) + ' AF</div>' +
+    '<div class="water-pumping">Pumping ' + chemMoney(pump) + '</div>' +
+    compareHtml + '</div>' +
+    '<div class="water-metric"><div class="chem-total-label">Supply</div>' +
+    '<div class="chem-total-value">' + supplyHtml + '</div></div>' +
+    '<div class="water-metric"><div class="chem-total-label">Remaining</div>' +
+    '<div class="chem-total-value">' + remainHtml + '</div></div>';
 
-  const byOut = {};
-  rows.forEach(function(r) {
-    byOut[r.Outlet] = (byOut[r.Outlet] || 0) + (r.AcreFeet || 0);
-  });
-  const cats = Object.keys(byOut).sort();
-  const denom = total || 1;
-  const grid = document.getElementById('water-outlet-grid');
-  if (grid) {
-    grid.innerHTML = cats.map(function(o) {
-      const sel = waterSelectedOutlet === o ? ' selected' : '';
-      const pct = 100 * byOut[o] / denom;
-      return '<div class="chem-cat-card' + sel + '" data-outlet="' + chemEsc(o) + '">' +
-        '<div class="chem-cat-name">' + chemEsc(o) + '</div>' +
-        '<div class="chem-cat-dollars">' + waterFmtAf(byOut[o]) + ' AF</div>' +
-        '<div class="chem-cat-pct">' + pct.toFixed(1) + '% of total</div></div>';
-    }).join('');
-    grid.onclick = function(ev) {
-      var card = ev.target.closest('.chem-cat-card');
-      if (!card) return;
-      selectWaterOutlet(card.getAttribute('data-outlet'));
-    };
-  }
-
-  const chartRows = waterSelectedOutlet
-    ? rows.filter(function(r) { return r.Outlet === waterSelectedOutlet; })
-    : rows;
   const chartTitle = document.getElementById('water-chart-title');
-  if (chartTitle) {
-    chartTitle.textContent = waterSelectedOutlet
-      ? waterSelectedOutlet + ' monthly use'
-      : 'Monthly use (acre-feet)';
-  }
+  if (chartTitle) chartTitle.textContent = 'Monthly use (acre-feet)';
 
   const selVals = monthNums.map(function(m) {
-    return chartRows.filter(function(r) { return r.Month === m; })
+    return rows.filter(function(r) { return r.Month === m; })
       .reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
   });
   const histVals = monthNums.map(function(m) {
@@ -3360,9 +3299,7 @@ function renderWater() {
     let sum = 0;
     priorYears.forEach(function(py) {
       sum += waterData.filter(function(r) {
-        if (r.WaterYear !== py || r.Month !== m) return false;
-        if (waterSelectedOutlet && r.Outlet !== waterSelectedOutlet) return false;
-        return true;
+        return r.WaterYear === py && r.Month === m;
       }).reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
     });
     return sum / priorYears.length;
