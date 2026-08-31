@@ -1588,13 +1588,13 @@
 <div class="content">
 
   <div class="filter-bar range-bar" id="global-range-bar">
-    <span class="filter-label">Crop year to date</span>
+    <span class="filter-label" id="range-bar-label">Crop year to date</span>
     <span class="filter-label">From</span>
     <input type="month" id="range-from" onchange="onRangeChange()">
     <span class="filter-label" style="margin-left:8px">To</span>
     <input type="month" id="range-to" onchange="onRangeChange()">
     <button type="button" class="range-clear" onclick="clearMonthRange()">Clear</button>
-    <span class="filter-hint">Crop year starts November</span>
+    <span class="filter-hint" id="range-bar-hint">Crop year starts November</span>
   </div>
 
   <!-- PACKOUT SECTION -->
@@ -2019,6 +2019,20 @@ function showSection(name, el) {
   const rangeBar = document.getElementById('global-range-bar');
   if (rangeBar) {
     rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest') ? 'none' : '';
+  }
+  const rangeLabel = document.getElementById('range-bar-label');
+  const rangeHint = document.getElementById('range-bar-hint');
+  if (rangeLabel && rangeHint) {
+    if (name === 'labor' || name === 'chemicals') {
+      rangeLabel.textContent = 'Fiscal year to date';
+      rangeHint.textContent = 'Fiscal year January–December';
+    } else if (name === 'water') {
+      rangeLabel.textContent = 'Water year to date';
+      rangeHint.textContent = 'Water year starts March';
+    } else {
+      rangeLabel.textContent = 'Crop year to date';
+      rangeHint.textContent = 'Crop year starts November';
+    }
   }
 
   if (name === 'harvest') updateCalendar();
