@@ -1381,6 +1381,32 @@
   }
   #labor-section .chem-compare.up { color: #c62828; }
   #labor-section .chem-compare.down { color: #2e7d32; }
+  #labor-section .chem-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 28px;
+    margin-bottom: 22px;
+    padding: 18px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  #labor-section .chem-total-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+  #labor-section .chem-total-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--dark);
+    letter-spacing: 0.01em;
+  }
   #labor-section .chem-chart-wrap {
     background: var(--card);
     border: 1px solid var(--border);
@@ -1434,12 +1460,15 @@
     min-width: 0;
   }
   #labor-section .chem-bar-label {
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.02em;
+    text-transform: uppercase;
     color: var(--text-light);
     margin-top: 6px;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.15;
+    white-space: normal;
+    max-width: 72px;
   }
   #labor-section .chem-bar-amt {
     font-size: 10px;
@@ -1593,6 +1622,7 @@
         <div id="labor-compare-line" class="chem-compare"></div>
       </div>
     </div>
+    <div id="labor-worktype-summary" class="chem-summary"></div>
     <div id="labor-chart-wrap" class="chem-chart-wrap">
       <div class="chem-chart-title">Cost by work type</div>
       <div class="water-legend">
@@ -2677,7 +2707,7 @@ function laborCompareRows(yearF, workF, blockF, months, cmp) {
   }
   const prior = yearF === 'all'
     ? years.filter(y => y !== latest)
-    : years.filter(y => y !== yearF);
+    : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
   return { priorYears: prior, passFilters: passFilters };
 }
 
@@ -2686,7 +2716,7 @@ function laborHistAvgByType(yearF, workF, blockF, months) {
   const latest = years.length ? years[years.length - 1] : '';
   const prior = yearF === 'all'
     ? years.filter(y => y !== latest)
-    : years.filter(y => y !== yearF);
+    : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
   const acc = {};
   if (!prior.length) return { byType: acc, years: prior, total: 0 };
   prior.forEach(y => {
@@ -2761,23 +2791,42 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
   });
 
   const selTot = selectedRows.reduce((s, d) => s + (d.amount || 0), 0);
-  if (line) {
-    if (!types.length) {
-      line.className = 'chem-compare';
-      line.textContent = '';
-    } else {
-      const diff = selTot - cmpTotal;
-      const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
-      const sign = diff > 0 ? '+' : '';
-      let pctBit = '';
-      if (cmpTotal) {
-        const pct = (diff / cmpTotal) * 100;
-        const psign = pct > 0 ? '+' : '';
-        pctBit = ' (' + psign + pct.toFixed(0) + '%)';
-      }
-      line.className = 'chem-compare ' + dir;
-      line.textContent = sign + laborMoney(diff) + ' vs ' + cmpLabel + pctBit;
+  let compareHtml = '';
+  if (cmp === 'avg' && !(function() {
+    const years = laborYearsInData();
+    const latest = years.length ? years[years.length - 1] : '';
+    const prior = yearF === 'all'
+      ? years.filter(y => y !== latest)
+      : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
+    return prior.length;
+  })()) {
+    compareHtml = '<div class="chem-compare">— vs historical average</div>';
+  } else {
+    const diff = selTot - cmpTotal;
+    const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+    const sign = diff > 0 ? '+' : '';
+    let pctBit = '';
+    if (cmpTotal) {
+      const pct = (diff / cmpTotal) * 100;
+      const psign = pct > 0 ? '+' : '';
+      pctBit = ' (' + psign + pct.toFixed(0) + '%)';
     }
+    compareHtml = '<div class="chem-compare ' + dir + '">' +
+      sign + laborMoney(diff) + ' vs ' + cmpLabel + pctBit + '</div>';
+  }
+  if (line) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = compareHtml;
+    const el = tmp.firstChild;
+    line.className = el ? el.className : 'chem-compare';
+    line.textContent = el ? el.textContent : '';
+  }
+  const summary = document.getElementById('labor-worktype-summary');
+  if (summary) {
+    summary.innerHTML =
+      '<div><div class="chem-total-label">Selected</div>' +
+      '<div class="chem-total-value">' + laborMoney(selTot) + '</div>' +
+      compareHtml + '</div>';
   }
 
   if (!types.length) {
