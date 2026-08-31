@@ -1165,7 +1165,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-light);
-    margin-bottom: 16px;
+    margin-bottom: 10px;
   }
   #chemicals-section .chem-bars {
     display: flex;
@@ -1205,10 +1205,49 @@
     margin-bottom: 4px;
     white-space: nowrap;
   }
+  #chemicals-section .water-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  #chemicals-section .water-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  #chemicals-section .water-swatch.sel { background: var(--mid); }
+  #chemicals-section .water-swatch.hist {
+    background: #c5d1c6;
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+  #chemicals-section .water-bar-pair {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+  }
+  #chemicals-section .water-bar {
+    width: 14px;
+    max-width: 22px;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+  #chemicals-section .water-bar.sel { background: var(--mid); }
+  #chemicals-section .water-bar.hist { background: #c5d1c6; }
+  #chemicals-section .water-bar.zero { background: var(--border); }
   @media (max-width: 640px) {
     #chemicals-section .chem-total-value { font-size: 26px; }
     #chemicals-section .chem-bars { height: 140px; gap: 3px; }
     #chemicals-section .chem-bar-amt { font-size: 8px; }
+    #chemicals-section .water-bar { width: 10px; }
   }
 
   #chemicals-section .chem-view-toggle {
@@ -1666,6 +1705,7 @@
         <option value="2025">2025</option>
         <option value="2026" selected>2026 YTD</option>
       </select>
+      <span class="filter-hint">Jan–Dec fiscal year. Crop-year bar does not apply here.</span>
       <span class="filter-label" style="margin-left:8px">View</span>
       <div class="chem-view-toggle" role="group" aria-label="Chemicals view">
         <button type="button" class="chem-view-btn active" id="chem-view-purchases" onclick="setChemView('purchases')">Purchases</button>
@@ -1677,6 +1717,10 @@
       <div id="chem-cat-grid" class="chem-cat-grid"></div>
       <div class="chem-chart-wrap">
         <div id="chem-chart-title" class="chem-chart-title">Monthly spend</div>
+        <div class="water-legend">
+          <span><span class="water-swatch sel"></span>Selected</span>
+          <span><span class="water-swatch hist"></span><span id="chem-compare-legend">2025</span></span>
+        </div>
         <div id="chem-bars" class="chem-bars"></div>
       </div>
       <div id="chem-products" class="chem-products">
@@ -1703,6 +1747,10 @@
       <div id="spray-cat-grid" class="chem-cat-grid"></div>
       <div class="chem-chart-wrap">
         <div id="spray-chart-title" class="chem-chart-title">Monthly recs</div>
+        <div class="water-legend">
+          <span><span class="water-swatch sel"></span>Selected</span>
+          <span><span class="water-swatch hist"></span><span id="spray-compare-legend">2025</span></span>
+        </div>
         <div id="spray-bars" class="chem-bars"></div>
       </div>
       <div class="filter-bar" id="spray-filter-bar">
@@ -3234,28 +3282,21 @@ function renderSprayRecs() {
   const blockF = (document.getElementById('spray-block-filter') || {}).value || 'all';
   const prodF = (document.getElementById('spray-product-filter') || {}).value || 'all';
 
-  if (year !== 2026) {
-    if (summary) {
-      summary.innerHTML =
-        '<div><div class="chem-total-label">Spray recs</div>' +
-        '<div class="chem-total-value">0</div></div>';
-    }
+  const yearRows = sprayData.filter(function(r) {
+    return parseInt(String(r.date || '').slice(0, 4), 10) === year;
+  });
+
+  if (!yearRows.length) {
     if (note) {
       note.style.display = 'block';
       note.textContent = 'No spray recs for ' + year + '. Telus recommendations cover 2026 only.';
     }
-    body.innerHTML = '<tr class="row-empty"><td colspan="8">No spray recs this year</td></tr>';
-    renderSprayCatCards([]);
-    renderSprayMonthBars([]);
-    return;
+  } else if (note) {
+    note.style.display = 'none';
+    note.textContent = '';
   }
 
-  if (note) { note.style.display = 'none'; note.textContent = ''; }
-
-  const rows = sprayData.filter(function(r) {
-    const y = parseInt(String(r.date || '').slice(0, 4), 10);
-    if (y !== year) return false;
-    if (!dateInRange(r.date)) return false;
+  const rows = yearRows.filter(function(r) {
     if (blockF === 'none') {
       if (r.block != null) return false;
     } else if (blockF !== 'all' && String(r.block) !== blockF) {
@@ -3275,11 +3316,8 @@ function renderSprayRecs() {
     return String(a.productShort || '').localeCompare(String(b.productShort || ''));
   });
 
-  const yearRows = sprayData.filter(function(r) {
-    return parseInt(String(r.date || '').slice(0, 4), 10) === year && dateInRange(r.date);
-  });
   renderSprayCatCards(yearRows);
-  renderSprayMonthBars(yearRows);
+  renderSprayMonthBars(yearRows, year);
 
   const uniqBlocks = new Set();
   rows.forEach(function(r) { if (r.block != null) uniqBlocks.add(r.block); });
@@ -3345,7 +3383,7 @@ function renderSprayCatCards(yearRows) {
   };
 }
 
-function renderSprayMonthBars(yearRows) {
+function renderSprayMonthBars(yearRows, year) {
   const chartRows = spraySelectedCat
     ? yearRows.filter(function(r) { return r.category === spraySelectedCat; })
     : yearRows;
@@ -3355,24 +3393,44 @@ function renderSprayMonthBars(yearRows) {
       ? spraySelectedCat + ' monthly recs'
       : 'Monthly recs';
   }
+  const priorYear = (year || 0) - 1;
+  const legend = document.getElementById('spray-compare-legend');
+  if (legend) legend.textContent = priorYear > 0 ? String(priorYear) : '';
+  const priorRows = (priorYear > 0 ? sprayData : []).filter(function(r) {
+    if (parseInt(String(r.date || '').slice(0, 4), 10) !== priorYear) return false;
+    if (spraySelectedCat && (r.category || '') !== spraySelectedCat) return false;
+    return true;
+  });
   const bars = document.getElementById('spray-bars');
   if (!bars) return;
   const monthLabs = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const vals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  const selVals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  const histVals = [0,0,0,0,0,0,0,0,0,0,0,0];
   chartRows.forEach(function(r) {
     const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
-    if (m >= 0 && m < 12) vals[m] += 1;
+    if (m >= 0 && m < 12) selVals[m] += 1;
   });
-  const max = Math.max.apply(null, vals.concat([1]));
+  priorRows.forEach(function(r) {
+    const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
+    if (m >= 0 && m < 12) histVals[m] += 1;
+  });
+  const max = Math.max.apply(null, selVals.concat(histVals).concat([1]));
   bars.innerHTML = monthLabs.map(function(lab, i) {
-    const v = vals[i];
-    const h = v ? Math.max(4, Math.round(148 * v / max)) : 2;
-    const zero = v ? '' : ' zero';
-    const tip = lab + ' ' + v + (v === 1 ? ' rec' : ' recs');
+    const v = selVals[i];
+    const h = histVals[i];
+    const hs = v ? Math.max(4, Math.round(148 * v / max)) : 2;
+    const hh = h ? Math.max(4, Math.round(148 * h / max)) : 2;
+    const zeroS = v ? '' : ' zero';
+    const zeroH = h ? '' : ' zero';
+    const tip = lab + ' selected ' + v + (v === 1 ? ' rec' : ' recs') +
+      ' · ' + priorYear + ' ' + h + (h === 1 ? ' rec' : ' recs');
     const amt = v ? String(v) : '';
     return '<div class="chem-bar-col">' +
       '<div class="chem-bar-amt">' + amt + '</div>' +
-      '<div class="chem-bar' + zero + '" style="height:' + h + 'px" title="' + tip + '"></div>' +
+      '<div class="water-bar-pair" title="' + chemEsc(tip) + '">' +
+      '<div class="water-bar sel' + zeroS + '" style="height:' + hs + 'px"></div>' +
+      '<div class="water-bar hist' + zeroH + '" style="height:' + hh + 'px"></div>' +
+      '</div>' +
       '<div class="chem-bar-label">' + lab + '</div></div>';
   }).join('');
 }
@@ -3415,43 +3473,26 @@ function renderChemicals() {
   const yearSel = document.getElementById('chem-year-filter');
   if (!yearSel) return;
   const year = parseInt(yearSel.value, 10);
-  const range = getMonthRange();
   const rows = nutrienData.filter(function(r) {
-    if (r.year !== year) return false;
-    return dateInRange(r.date);
+    return r.year === year;
   });
   const total = rows.reduce(function(s, r) { return s + (r.cost || 0); }, 0);
 
   let compareHtml = '';
   if (year === 2026 && rows.length) {
     const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    let ytd26, ytd25, spanLabel;
-    if (range) {
-      ytd26 = total;
-      const fromM = range.from.slice(5, 7);
-      const toM = range.to.slice(5, 7);
-      const start25 = '2025-' + fromM + '-01';
-      const end25 = lastDayOfMonth('2025-' + toM);
-      ytd25 = nutrienData.filter(function(r) {
-        const d = String(r.date || '').slice(0, 10);
-        return r.year === 2025 && start25 <= d && d <= end25;
-      }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
-      const fm = parseInt(fromM, 10), tm = parseInt(toM, 10);
-      spanLabel = fm === tm ? MONTHS[fm] : (MONTHS[fm] + '–' + MONTHS[tm]);
-    } else {
-      let latest = 0;
-      rows.forEach(function(r) {
-        const m = parseInt(String(r.date).slice(5, 7), 10);
-        if (m > latest) latest = m;
-      });
-      ytd26 = rows.filter(function(r) {
-        return parseInt(String(r.date).slice(5, 7), 10) <= latest;
-      }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
-      ytd25 = nutrienData.filter(function(r) {
-        return r.year === 2025 && parseInt(String(r.date).slice(5, 7), 10) <= latest;
-      }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
-      spanLabel = 'Jan–' + MONTHS[latest];
-    }
+    let latest = 0;
+    rows.forEach(function(r) {
+      const m = parseInt(String(r.date).slice(5, 7), 10);
+      if (m > latest) latest = m;
+    });
+    const ytd26 = rows.filter(function(r) {
+      return parseInt(String(r.date).slice(5, 7), 10) <= latest;
+    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+    const ytd25 = nutrienData.filter(function(r) {
+      return r.year === 2025 && parseInt(String(r.date).slice(5, 7), 10) <= latest;
+    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+    const spanLabel = 'Jan–' + MONTHS[latest];
     const diff = ytd26 - ytd25;
     const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
     const sign = diff > 0 ? '+' : (diff < 0 ? '' : '');
@@ -3465,7 +3506,7 @@ function renderChemicals() {
       sign + chemMoney(diff) + ' vs 2025 ' + spanLabel + pctBit + '</div>';
   }
 
-  const spendLabel = range ? (formatRangeLabel(range) + ' spend') : (year === 2026 ? '2026 YTD spend' : year + ' spend');
+  const spendLabel = year === 2026 ? '2026 YTD spend' : year + ' spend';
   document.getElementById('chem-summary').innerHTML =
     '<div><div class="chem-total-label">' + spendLabel + '</div>' +
     '<div class="chem-total-value">' + chemMoney(total) + '</div></div>' + compareHtml;
@@ -3483,7 +3524,7 @@ function renderChemicals() {
     return '<div class="chem-cat-card' + sel + '" data-cat="' + chemEsc(c) + '">' +
       '<div class="chem-cat-name">' + chemEsc(c) + '</div>' +
       '<div class="chem-cat-dollars">' + chemMoney(byCat[c]) + '</div>' +
-      '<div class="chem-cat-pct">' + pct.toFixed(1) + (range ? '% of spend' : '% of year') + '</div></div>';
+      '<div class="chem-cat-pct">' + pct.toFixed(1) + '% of year</div></div>';
   }).join('');
   document.getElementById('chem-cat-grid').onclick = function(ev) {
     var card = ev.target.closest('.chem-cat-card');
@@ -3518,27 +3559,46 @@ function renderChemicals() {
   const chartRows = chemSelectedCat
     ? rows.filter(function(r) { return r.category === chemSelectedCat; })
     : rows;
+  const priorYear = year - 1;
+  const legend = document.getElementById('chem-compare-legend');
+  if (legend) legend.textContent = String(priorYear);
+  const priorRows = nutrienData.filter(function(r) {
+    if (r.year !== priorYear) return false;
+    if (chemSelectedCat && r.category !== chemSelectedCat) return false;
+    return true;
+  });
   const chartTitle = document.getElementById('chem-chart-title');
   if (chartTitle) {
     chartTitle.textContent = chemSelectedCat
       ? chemSelectedCat + ' monthly spend'
       : 'Monthly spend';
   }
-  const vals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  const selVals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  const histVals = [0,0,0,0,0,0,0,0,0,0,0,0];
   chartRows.forEach(function(r) {
     const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
-    if (m >= 0 && m < 12) vals[m] += (r.cost || 0);
+    if (m >= 0 && m < 12) selVals[m] += (r.cost || 0);
   });
-  const max = Math.max.apply(null, vals.concat([1]));
+  priorRows.forEach(function(r) {
+    const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
+    if (m >= 0 && m < 12) histVals[m] += (r.cost || 0);
+  });
+  const max = Math.max.apply(null, selVals.concat(histVals).concat([1]));
   document.getElementById('chem-bars').innerHTML = monthLabs.map(function(lab, i) {
-    const v = vals[i];
-    const h = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
-    const zero = v ? '' : ' zero';
-    const tip = lab + ' ' + chemMoney(v);
+    const v = selVals[i];
+    const h = histVals[i];
+    const hs = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
+    const hh = h ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 2;
+    const zeroS = v ? '' : ' zero';
+    const zeroH = h ? '' : ' zero';
+    const tip = lab + ' selected ' + chemMoney(v) + ' · ' + priorYear + ' ' + chemMoney(h);
     const amt = v ? chemMoney(v) : '';
     return '<div class="chem-bar-col">' +
       '<div class="chem-bar-amt">' + amt + '</div>' +
-      '<div class="chem-bar' + zero + '" style="height:' + h + 'px" title="' + tip + '"></div>' +
+      '<div class="water-bar-pair" title="' + chemEsc(tip) + '">' +
+      '<div class="water-bar sel' + zeroS + '" style="height:' + hs + 'px"></div>' +
+      '<div class="water-bar hist' + zeroH + '" style="height:' + hh + 'px"></div>' +
+      '</div>' +
       '<div class="chem-bar-label">' + lab + '</div></div>';
   }).join('');
 }
