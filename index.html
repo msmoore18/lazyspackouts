@@ -187,6 +187,14 @@
     margin-right: 4px;
   }
 
+  .filter-hint {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    text-transform: none;
+  }
+
   .filter-bar select {
     font-family: 'Jost', sans-serif;
     font-size: 13px;
@@ -1275,11 +1283,13 @@
 <div class="content">
 
   <div class="filter-bar range-bar" id="global-range-bar">
+    <span class="filter-label">Crop year to date</span>
     <span class="filter-label">From</span>
     <input type="month" id="range-from" onchange="onRangeChange()">
     <span class="filter-label" style="margin-left:8px">To</span>
     <input type="month" id="range-to" onchange="onRangeChange()">
     <button type="button" class="range-clear" onclick="clearMonthRange()">Clear</button>
+    <span class="filter-hint">Crop year starts November</span>
   </div>
 
   <!-- PACKOUT SECTION -->
@@ -1288,6 +1298,7 @@
     <div class="filter-bar">
       <span class="filter-label">Crop Year</span>
       <select id="year-filter-packout" onchange="filterPackout()"></select>
+      <span class="filter-hint">Nov–Oct</span>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="block-filter-packout" onchange="filterPackout()"></select>
       <div id="packout-show-cols" style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -1663,8 +1674,9 @@ function toggleMobile() {
 // ── YEAR TYPE HELPERS ─────────────────────────────────────────────────────────
 
 function cropYearOf(dateStr) {
+  // Crop year starts November: Nov 1 Y through Oct 31 Y+1 is crop year Y (label Y–Y+1).
   const [y, m] = dateStr.split('-').map(Number);
-  return m >= 10 ? y : y - 1;
+  return m >= 11 ? y : y - 1;
 }
 
 function cropYearLabel(startYear) {
