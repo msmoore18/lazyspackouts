@@ -1641,7 +1641,7 @@ function showSection(name, el) {
 
   const rangeBar = document.getElementById('global-range-bar');
   if (rangeBar) {
-    rangeBar.style.display = (name === 'maps' || name === 'financials') ? 'none' : '';
+    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest') ? 'none' : '';
   }
 
   if (name === 'harvest') updateCalendar();
