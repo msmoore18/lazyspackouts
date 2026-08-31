@@ -2106,9 +2106,8 @@ function updateCalendar() {
       if (harvest.length) foot.push(totalFB.toLocaleString() + ' FB');
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
-        foot.push('Labor $' + Math.round(laborTot).toLocaleString('en-US'));
+        foot.push('Contract Labor $' + Math.round(laborTot).toLocaleString('en-US'));
       }
-      if (sprays.length) foot.push(sprays.length + (sprays.length === 1 ? ' spray' : ' sprays'));
       const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '') + (sprays.length ? ' has-spray' : '');
       html += `<div class="cal-cell has-data${extra}" onclick="showDayDetail(${day},${month},${year})">
         <div class="cal-day-num">${day}</div>
