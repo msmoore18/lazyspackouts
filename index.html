@@ -2496,15 +2496,21 @@ function updateCalendar() {
       const laborPills = blockSet.map(id =>
         `<span class="cal-pill labor">${chemEsc(laborPillLabel(id, laborByBlock[id]))}</span>`
       ).join('');
-      const chemSeen = [];
+      const sprayByBlock = {};
       sprays.forEach(e => {
-        const lab = e.productShort || e.product;
-        if (lab && chemSeen.indexOf(lab) < 0) chemSeen.push(lab);
+        const id = laborBlockId(e.block);
+        const key = id || '_';
+        if (!sprayByBlock[key]) sprayByBlock[key] = [];
+        const lab = e.productShort || e.product || '';
+        if (lab && sprayByBlock[key].indexOf(lab) < 0) sprayByBlock[key].push(lab);
       });
-      chemSeen.sort(function(a, b) { return a.localeCompare(b); });
-      const sprayPills = chemSeen.map(lab =>
-        `<span class="cal-pill spray">${chemEsc(lab)}</span>`
-      ).join('');
+      const sprayPills = Object.keys(sprayByBlock).sort(function(a, b) {
+        if (a === '_') return 1;
+        if (b === '_') return -1;
+        return sortBlockIds(a, b);
+      }).map(function(id) {
+        return '<span class="cal-pill spray">' + chemEsc(sprayPillLabel(id === '_' ? '' : id, sprayByBlock[id])) + '</span>';
+      }).join('');
       const foot = [];
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
@@ -2670,6 +2676,18 @@ function laborBlockId(block) {
   const b = String(block || '').trim();
   if (!b || b === '—' || b.toLowerCase() === 'n/a') return '';
   return b.replace(/^blk\.?\s*/i, '').trim();
+}
+
+
+function sprayPillLabel(blockId, products) {
+  const id = laborBlockId(blockId) || String(blockId || '').trim();
+  const unique = [];
+  (products || []).forEach(function(p) {
+    if (p && unique.indexOf(p) < 0) unique.push(p);
+  });
+  unique.sort(function(a, b) { return a.localeCompare(b); });
+  const names = unique.join(', ');
+  return id ? ('Blk ' + id + ': ' + names) : names;
 }
 
 function laborPillLabel(blockId, works) {
