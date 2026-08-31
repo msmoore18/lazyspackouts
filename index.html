@@ -1792,15 +1792,15 @@
     <div class="filter-bar">
       <span class="filter-label">Year</span>
       <select id="fin-year-filter" onchange="renderFinancials()"></select>
-      <span class="filter-hint">from the Revenue sheet</span>
+      <span class="filter-hint">Revenue by block</span>
     </div>
-    <div id="fin-summary" class="chem-summary"></div>
     <div class="table-wrap">
       <table>
         <thead id="fin-head"></thead>
         <tbody id="fin-body"></tbody>
       </table>
     </div>
+    <div id="fin-summary" class="chem-summary"></div>
     <div id="fin-empty" class="fin-empty" style="display:none"></div>
   </div>
   <div id="chemicals-section" class="section">
@@ -4494,7 +4494,8 @@ loadSprays();
 <script>
 (function autoLoad() {
   const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
-  const finUrl = new URL('Financials.xlsx', document.baseURI).href;
+  const finUrl = new URL('financials-revenue.json', document.baseURI);
+  finUrl.searchParams.set('v', '3');
 
   function showManualUpload(msg) {
     document.getElementById('auto-load-ui').style.display = 'none';
@@ -4512,14 +4513,15 @@ loadSprays();
       parseWorkbook(wb);
     });
 
-  const finP = fetch(finUrl)
+  const finP = fetch(finUrl.href)
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.arrayBuffer();
+      return res.json();
     })
-    .then(function(buffer) {
-      const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
-      parseFinancialsWorkbook(wb);
+    .then(function(data) {
+      financialsRevenue = data && data.blocks && data.years
+        ? data
+        : { blocks: [], years: [] };
     })
     .catch(function() {
       financialsRevenue = { blocks: [], years: [] };
