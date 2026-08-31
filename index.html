@@ -1650,9 +1650,7 @@
   <div id="labor-section" class="section">
     <div class="page-title">Contract Labor</div>
     <div class="filter-bar">
-      <span class="filter-label">Year</span>
-      <select id="labor-year-filter" onchange="renderLabor()"></select>
-      <span class="filter-label" style="margin-left:8px">Work</span>
+      <span class="filter-label">Work</span>
       <select id="labor-work-filter" onchange="renderLabor()"></select>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="labor-block-filter" onchange="renderLabor()"></select>
@@ -1700,11 +1698,6 @@
   <div id="chemicals-section" class="section">
     <div class="page-title">Chemicals &amp; Fertilizer</div>
     <div class="filter-bar">
-      <span class="filter-label">Year</span>
-      <select id="chem-year-filter" onchange="onChemYearChange()">
-        <option value="2025">2025</option>
-        <option value="2026" selected>2026 YTD</option>
-      </select>
       <span class="filter-hint">Jan–Dec fiscal year. Crop-year bar does not apply here.</span>
       <span class="filter-label" style="margin-left:8px">View</span>
       <div class="chem-view-toggle" role="group" aria-label="Chemicals view">
@@ -1888,6 +1881,16 @@ function dateInRange(dateStr) {
   const d = String(dateStr || '').slice(0, 10);
   if (d.length < 10) return false;
   return (r.from + '-01') <= d && d <= lastDayOfMonth(r.to);
+}
+
+function dateInShiftedRange(dateStr, yearDelta) {
+  const r = getMonthRange();
+  if (!r) return true;
+  const d = String(dateStr || '').slice(0, 10);
+  if (d.length < 10) return false;
+  const from = String(parseInt(r.from.slice(0, 4), 10) + yearDelta).padStart(4, '0') + r.from.slice(4);
+  const to = String(parseInt(r.to.slice(0, 4), 10) + yearDelta).padStart(4, '0') + r.to.slice(4);
+  return (from + '-01') <= d && d <= lastDayOfMonth(to);
 }
 
 function formatRangeLabel(range) {
@@ -2658,42 +2661,35 @@ function laborShortVendor(v) {
 }
 
 function initLaborFilters() {
-  const years = [...new Set(laborData.map(d => (d.paid || '').slice(0,4)))].filter(Boolean).sort().reverse();
-  const ysel = document.getElementById('labor-year-filter');
-  if (!ysel) return;
-  const prevY = ysel.value;
-  ysel.innerHTML = '<option value="all">All Years</option>';
-  years.forEach(y => {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y; ysel.appendChild(o);
-  });
-  if ([...ysel.options].some(o => o.value === prevY)) ysel.value = prevY;
-  else if (years.length) ysel.value = years[0];
-
-  const works = [...new Set(laborData.map(d => d.work).filter(Boolean))].sort();
   const wsel = document.getElementById('labor-work-filter');
-  const prevW = wsel.value;
-  wsel.innerHTML = '<option value="all">All Work</option>';
-  works.forEach(w => {
-    const o = document.createElement('option');
-    o.value = w; o.textContent = w; wsel.appendChild(o);
-  });
-  if ([...wsel.options].some(o => o.value === prevW)) wsel.value = prevW;
-
-  const blocks = [...new Set(laborData.map(d => d.block).filter(Boolean))].sort((a,b) => {
-    const na = parseInt(String(a).replace(/\\D/g,''), 10);
-    const nb = parseInt(String(b).replace(/\\D/g,''), 10);
-    if (na && nb && na !== nb) return na - nb;
-    return String(a).localeCompare(String(b));
-  });
   const bsel = document.getElementById('labor-block-filter');
-  const prevB = bsel.value;
-  bsel.innerHTML = '<option value="all">All Blocks</option>';
-  blocks.forEach(b => {
-    const o = document.createElement('option');
-    o.value = b; o.textContent = b; bsel.appendChild(o);
-  });
-  if ([...bsel.options].some(o => o.value === prevB)) bsel.value = prevB;
+
+  if (wsel) {
+    const works = [...new Set(laborData.map(d => d.work).filter(Boolean))].sort();
+    const prevW = wsel.value;
+    wsel.innerHTML = '<option value="all">All Work</option>';
+    works.forEach(w => {
+      const o = document.createElement('option');
+      o.value = w; o.textContent = w; wsel.appendChild(o);
+    });
+    if ([...wsel.options].some(o => o.value === prevW)) wsel.value = prevW;
+  }
+
+  if (bsel) {
+    const blocks = [...new Set(laborData.map(d => d.block).filter(Boolean))].sort((a,b) => {
+      const na = parseInt(String(a).replace(/\\D/g,''), 10);
+      const nb = parseInt(String(b).replace(/\\D/g,''), 10);
+      if (na && nb && na !== nb) return na - nb;
+      return String(a).localeCompare(String(b));
+    });
+    const prevB = bsel.value;
+    bsel.innerHTML = '<option value="all">All Blocks</option>';
+    blocks.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b; o.textContent = b; bsel.appendChild(o);
+    });
+    if ([...bsel.options].some(o => o.value === prevB)) bsel.value = prevB;
+  }
 }
 
 
@@ -2713,13 +2709,53 @@ function laborYearsInData() {
   return [...new Set(laborData.map(laborPaidYear))].filter(Boolean).sort();
 }
 
-function initLaborCompare() {
-  const sel = document.getElementById('labor-compare-filter');
-  const ysel = document.getElementById('labor-year-filter');
-  if (!sel || !ysel) return;
-  const yearF = ysel.value;
+function laborSelectedYear() {
   const years = laborYearsInData();
-  const others = yearF === 'all' ? years : years.filter(y => y !== yearF);
+  const latest = years.length ? years[years.length - 1] : '';
+  const range = getMonthRange();
+  if (range) return range.to.slice(0, 4);
+  return latest;
+}
+
+function laborCoerceYear(yearF) {
+  const years = laborYearsInData();
+  const latest = years.length ? years[years.length - 1] : '';
+  if (!yearF || yearF === 'all') return latest;
+  return String(yearF);
+}
+
+function laborPeriodMonths(selectedRows) {
+  const range = getMonthRange();
+  if (range) {
+    const seen = {};
+    const months = [];
+    let y = parseInt(range.from.slice(0, 4), 10);
+    let m = parseInt(range.from.slice(5, 7), 10);
+    const ty = parseInt(range.to.slice(0, 4), 10);
+    const tm = parseInt(range.to.slice(5, 7), 10);
+    while (y < ty || (y === ty && m <= tm)) {
+      if (!seen[m]) { seen[m] = true; months.push(m); }
+      m += 1;
+      if (m > 12) { m = 1; y += 1; }
+    }
+    return months;
+  }
+  const monthSet = {};
+  (selectedRows || []).forEach(d => {
+    const m = laborMonthNum(d);
+    if (m) monthSet[m] = true;
+  });
+  return Object.keys(monthSet).map(Number).sort((a, b) => a - b);
+}
+
+let laborCompareReady = false;
+
+function initLaborCompare(yearF) {
+  const sel = document.getElementById('labor-compare-filter');
+  if (!sel) return;
+  const years = laborYearsInData();
+  const selected = laborCoerceYear(yearF || laborSelectedYear());
+  const others = years.filter(y => y !== selected);
   const prev = sel.value || 'avg';
   sel.innerHTML = '<option value="avg">Historical average</option>';
   others.forEach(y => {
@@ -2728,8 +2764,18 @@ function initLaborCompare() {
     o.textContent = y;
     sel.appendChild(o);
   });
-  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
-  else sel.value = 'avg';
+  function pickDefault() {
+    if (selected === '2026' && others.indexOf('2025') >= 0) return '2025';
+    return 'avg';
+  }
+  if (!laborCompareReady) {
+    laborCompareReady = true;
+    sel.value = pickDefault();
+  } else if (prev !== 'all' && prev !== selected && [...sel.options].some(o => o.value === prev)) {
+    sel.value = prev;
+  } else {
+    sel.value = pickDefault();
+  }
 }
 
 function laborByType(rows) {
@@ -2742,8 +2788,7 @@ function laborByType(rows) {
 }
 
 function laborCompareRows(yearF, workF, blockF, months, cmp) {
-  const years = laborYearsInData();
-  const latest = years.length ? years[years.length - 1] : '';
+  yearF = laborCoerceYear(yearF);
   function passFilters(d) {
     if (workF !== 'all' && d.work !== workF) return false;
     if (blockF !== 'all' && d.block !== blockF) return false;
@@ -2753,18 +2798,15 @@ function laborCompareRows(yearF, workF, blockF, months, cmp) {
   if (cmp && cmp !== 'avg') {
     return laborData.filter(d => laborPaidYear(d) === cmp && passFilters(d));
   }
-  const prior = yearF === 'all'
-    ? years.filter(y => y !== latest)
-    : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
+  const years = laborYearsInData();
+  const prior = years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
   return { priorYears: prior, passFilters: passFilters };
 }
 
 function laborHistAvgByType(yearF, workF, blockF, months) {
   const years = laborYearsInData();
-  const latest = years.length ? years[years.length - 1] : '';
-  const prior = yearF === 'all'
-    ? years.filter(y => y !== latest)
-    : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
+  yearF = laborCoerceYear(yearF);
+  const prior = years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
   const acc = {};
   if (!prior.length) return { byType: acc, years: prior, total: 0 };
   prior.forEach(y => {
@@ -2796,19 +2838,15 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
   const legend = document.getElementById('labor-compare-legend');
   const line = document.getElementById('labor-compare-line');
   if (!bars) return;
-  initLaborCompare();
+  yearF = laborCoerceYear(yearF);
+  initLaborCompare(yearF);
   const cmp = cmpSel ? cmpSel.value : 'avg';
-  const monthSet = {};
-  selectedRows.forEach(d => {
-    const m = laborMonthNum(d);
-    if (m) monthSet[m] = true;
-  });
-  const months = Object.keys(monthSet).map(Number).sort((a, b) => a - b);
+  const months = laborPeriodMonths(selectedRows);
 
   let cmpByType = {};
   let cmpTotal = 0;
   let cmpLabel = 'historical average';
-  if (cmp && cmp !== 'avg') {
+  if (cmp && cmp !== 'avg' && cmp !== 'all' && cmp !== yearF) {
     const rows = laborData.filter(d => {
       if (laborPaidYear(d) !== cmp) return false;
       if (workF !== 'all' && d.work !== workF) return false;
@@ -2825,7 +2863,7 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
     cmpTotal = hist.total;
     cmpLabel = 'historical average';
   }
-  if (legend) legend.textContent = cmp === 'avg' ? 'Historical average' : cmp;
+  if (legend) legend.textContent = (cmp && cmp !== 'avg' && cmp !== 'all' && cmp !== yearF) ? cmp : 'Historical average';
 
   const selByType = laborByType(selectedRows);
   const types = [...new Set(Object.keys(selByType).concat(Object.keys(cmpByType)))];
@@ -2840,14 +2878,9 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
 
   const selTot = selectedRows.reduce((s, d) => s + (d.amount || 0), 0);
   let compareHtml = '';
-  if (cmp === 'avg' && !(function() {
-    const years = laborYearsInData();
-    const latest = years.length ? years[years.length - 1] : '';
-    const prior = yearF === 'all'
-      ? years.filter(y => y !== latest)
-      : years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
-    return prior.length;
-  })()) {
+  const years = laborYearsInData();
+  const prior = years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
+  if ((cmp === 'avg' || cmp === 'all' || cmp === yearF) && !prior.length) {
     compareHtml = '<div class="chem-compare">— vs historical average</div>';
   } else {
     const diff = selTot - cmpTotal;
@@ -2902,18 +2935,19 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
 }
 
 function renderLabor() {
-  const ysel = document.getElementById('labor-year-filter');
-  if (!ysel) return;
-  if (!ysel.options.length) initLaborFilters();
-  const yearF = ysel.value;
-  const workF = document.getElementById('labor-work-filter').value;
-  const blockF = document.getElementById('labor-block-filter').value;
+  const wsel = document.getElementById('labor-work-filter');
+  const bsel = document.getElementById('labor-block-filter');
+  if (!wsel || !bsel) return;
+  if (!wsel.options.length || !bsel.options.length) initLaborFilters();
+  let yearF = laborCoerceYear(laborSelectedYear());
+  const workF = wsel.value;
+  const blockF = bsel.value;
+  const range = getMonthRange();
   const rows = laborData.filter(d => {
-    const y = (d.paid || '').slice(0,4);
-    return (yearF === 'all' || y === yearF)
-      && (workF === 'all' || d.work === workF)
-      && (blockF === 'all' || d.block === blockF)
-      && dateInRange(d.worked || d.paid);
+    if (workF !== 'all' && d.work !== workF) return false;
+    if (blockF !== 'all' && d.block !== blockF) return false;
+    if (range) return dateInRange(d.worked || d.paid);
+    return laborPaidYear(d) === yearF;
   });
   const tot = rows.reduce((s, d) => s + (d.amount || 0), 0);
   document.getElementById('labor-total').textContent = rows.length + ' jobs  ·  ' + laborMoney(tot);
@@ -3272,21 +3306,25 @@ function initSprayFilters() {
 }
 
 function renderSprayRecs() {
-  const yearSel = document.getElementById('chem-year-filter');
   const body = document.getElementById('spray-body');
   const note = document.getElementById('spray-note');
   const summary = document.getElementById('spray-summary');
-  if (!yearSel || !body) return;
+  if (!body) return;
   initSprayFilters();
-  const year = parseInt(yearSel.value, 10);
+  const range = getMonthRange();
+  let latestYear = 0;
+  sprayData.forEach(function(r) {
+    const y = parseInt(String(r.date || '').slice(0, 4), 10);
+    if (y > latestYear) latestYear = y;
+  });
+  const year = range ? parseInt(range.to.slice(0, 4), 10) : (latestYear || 2026);
   const blockF = (document.getElementById('spray-block-filter') || {}).value || 'all';
   const prodF = (document.getElementById('spray-product-filter') || {}).value || 'all';
 
-  const yearRows = sprayData.filter(function(r) {
+  const yearHasRecs = sprayData.some(function(r) {
     return parseInt(String(r.date || '').slice(0, 4), 10) === year;
   });
-
-  if (!yearRows.length) {
+  if (!yearHasRecs) {
     if (note) {
       note.style.display = 'block';
       note.textContent = 'No spray recs for ' + year + '. Telus recommendations cover 2026 only.';
@@ -3295,6 +3333,11 @@ function renderSprayRecs() {
     note.style.display = 'none';
     note.textContent = '';
   }
+
+  const yearRows = sprayData.filter(function(r) {
+    if (range) return dateInRange(r.date);
+    return parseInt(String(r.date || '').slice(0, 4), 10) === year;
+  });
 
   const rows = yearRows.filter(function(r) {
     if (blockF === 'none') {
@@ -3321,11 +3364,11 @@ function renderSprayRecs() {
 
   const uniqBlocks = new Set();
   rows.forEach(function(r) { if (r.block != null) uniqBlocks.add(r.block); });
-  const range = sprayDateRange(yearRows);
+  const rangeLabel = sprayDateRange(yearRows);
   if (summary) {
     summary.innerHTML =
       '<div><div class="chem-total-label">Recs</div><div class="chem-total-value">' + yearRows.length + '</div></div>' +
-      '<div><div class="chem-total-label">Date range</div><div class="chem-total-value" style="font-size:22px">' + chemEsc(range || '—') + '</div></div>' +
+      '<div><div class="chem-total-label">Date range</div><div class="chem-total-value" style="font-size:22px">' + chemEsc(rangeLabel || '—') + '</div></div>' +
       '<div><div class="chem-total-label">Unique blocks</div><div class="chem-total-value">' + uniqBlocks.size + '</div></div>';
   }
 
@@ -3396,10 +3439,11 @@ function renderSprayMonthBars(yearRows, year) {
   const priorYear = (year || 0) - 1;
   const legend = document.getElementById('spray-compare-legend');
   if (legend) legend.textContent = priorYear > 0 ? String(priorYear) : '';
+  const range = getMonthRange();
   const priorRows = (priorYear > 0 ? sprayData : []).filter(function(r) {
-    if (parseInt(String(r.date || '').slice(0, 4), 10) !== priorYear) return false;
     if (spraySelectedCat && (r.category || '') !== spraySelectedCat) return false;
-    return true;
+    if (range) return dateInShiftedRange(r.date, -1);
+    return parseInt(String(r.date || '').slice(0, 4), 10) === priorYear;
   });
   const bars = document.getElementById('spray-bars');
   if (!bars) return;
@@ -3435,11 +3479,7 @@ function renderSprayMonthBars(yearRows, year) {
   }).join('');
 }
 
-function onChemYearChange() {
-  chemSelectedCat = null;
-  spraySelectedCat = null;
-  renderChemicalsPage();
-}
+function onChemYearChange() {}
 
 function selectSprayCategory(cat) {
   spraySelectedCat = (cat && spraySelectedCat === cat) ? null : cat;
@@ -3470,44 +3510,68 @@ function selectChemCategory(cat) {
 }
 
 function renderChemicals() {
-  const yearSel = document.getElementById('chem-year-filter');
-  if (!yearSel) return;
-  const year = parseInt(yearSel.value, 10);
-  const rows = nutrienData.filter(function(r) {
-    return r.year === year;
+  const summary = document.getElementById('chem-summary');
+  if (!summary) return;
+  const range = getMonthRange();
+  let latestYear = 0;
+  nutrienData.forEach(function(r) {
+    const y = r.year || parseInt(String(r.date || '').slice(0, 4), 10) || 0;
+    if (y > latestYear) latestYear = y;
   });
+  const year = range ? parseInt(range.to.slice(0, 4), 10) : latestYear;
+  const rows = range
+    ? nutrienData.filter(function(r) { return dateInRange(r.date); })
+    : nutrienData.filter(function(r) { return r.year === year; });
   const total = rows.reduce(function(s, r) { return s + (r.cost || 0); }, 0);
 
+  const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let latestMonth = 0;
+  rows.forEach(function(r) {
+    const m = parseInt(String(r.date).slice(5, 7), 10);
+    if (m > latestMonth) latestMonth = m;
+  });
+  const priorYear = (year || 0) - 1;
+  const priorRows = nutrienData.filter(function(r) {
+    if (range) return dateInShiftedRange(r.date, -1);
+    if (r.year !== priorYear) return false;
+    if (latestMonth && parseInt(String(r.date).slice(5, 7), 10) > latestMonth) return false;
+    return true;
+  });
+  const priorTotal = priorRows.reduce(function(s, r) { return s + (r.cost || 0); }, 0);
+
   let compareHtml = '';
-  if (year === 2026 && rows.length) {
-    const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    let latest = 0;
-    rows.forEach(function(r) {
-      const m = parseInt(String(r.date).slice(5, 7), 10);
-      if (m > latest) latest = m;
-    });
-    const ytd26 = rows.filter(function(r) {
-      return parseInt(String(r.date).slice(5, 7), 10) <= latest;
-    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
-    const ytd25 = nutrienData.filter(function(r) {
-      return r.year === 2025 && parseInt(String(r.date).slice(5, 7), 10) <= latest;
-    }).reduce(function(s, r) { return s + (r.cost || 0); }, 0);
-    const spanLabel = 'Jan–' + MONTHS[latest];
-    const diff = ytd26 - ytd25;
+  if (rows.length || priorTotal) {
+    const diff = total - priorTotal;
     const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
     const sign = diff > 0 ? '+' : (diff < 0 ? '' : '');
     let pctBit = '';
-    if (ytd25) {
-      const pct = (diff / ytd25) * 100;
+    if (priorTotal) {
+      const pct = (diff / priorTotal) * 100;
       const psign = pct > 0 ? '+' : '';
       pctBit = ' (' + psign + pct.toFixed(0) + '%)';
     }
+    let spanLabel = '';
+    if (range) {
+      const fy = parseInt(range.from.slice(0, 4), 10);
+      const fm = parseInt(range.from.slice(5, 7), 10);
+      const ty = parseInt(range.to.slice(0, 4), 10);
+      const tm = parseInt(range.to.slice(5, 7), 10);
+      if (fy === ty) {
+        spanLabel = (fm === tm) ? MONTHS[fm] : (MONTHS[fm] + '–' + MONTHS[tm]);
+      } else {
+        spanLabel = MONTHS[fm] + ' ' + (fy - 1) + ' – ' + MONTHS[tm] + ' ' + (ty - 1);
+      }
+    } else if (latestMonth && latestMonth < 12) {
+      spanLabel = 'Jan–' + MONTHS[latestMonth];
+    }
     compareHtml = '<div class="chem-compare ' + dir + '">' +
-      sign + chemMoney(diff) + ' vs 2025 ' + spanLabel + pctBit + '</div>';
+      sign + chemMoney(diff) + ' vs ' + priorYear + (spanLabel ? ' ' + spanLabel : '') + pctBit + '</div>';
   }
 
-  const spendLabel = year === 2026 ? '2026 YTD spend' : year + ' spend';
-  document.getElementById('chem-summary').innerHTML =
+  const spendLabel = range
+    ? (formatRangeLabel(range) + ' spend')
+    : (year === 2026 ? '2026 YTD spend' : year + ' spend');
+  summary.innerHTML =
     '<div><div class="chem-total-label">' + spendLabel + '</div>' +
     '<div class="chem-total-value">' + chemMoney(total) + '</div></div>' + compareHtml;
 
@@ -3559,11 +3623,9 @@ function renderChemicals() {
   const chartRows = chemSelectedCat
     ? rows.filter(function(r) { return r.category === chemSelectedCat; })
     : rows;
-  const priorYear = year - 1;
   const legend = document.getElementById('chem-compare-legend');
   if (legend) legend.textContent = String(priorYear);
-  const priorRows = nutrienData.filter(function(r) {
-    if (r.year !== priorYear) return false;
+  const priorChartRows = priorRows.filter(function(r) {
     if (chemSelectedCat && r.category !== chemSelectedCat) return false;
     return true;
   });
@@ -3579,7 +3641,7 @@ function renderChemicals() {
     const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
     if (m >= 0 && m < 12) selVals[m] += (r.cost || 0);
   });
-  priorRows.forEach(function(r) {
+  priorChartRows.forEach(function(r) {
     const m = parseInt(String(r.date).slice(5, 7), 10) - 1;
     if (m >= 0 && m < 12) histVals[m] += (r.cost || 0);
   });
