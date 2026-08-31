@@ -3650,86 +3650,37 @@ function renderFinancials() {
   }
   if (empty) empty.style.display = 'none';
 
-  const revPick = finPickMetric(rec, [
-    'Revenue (Actual)',
-    'Estimated Revenue',
-    'Total Revenue',
-    'Checks Received',
-    'Revenue (Est)',
-    'Adj Revenue (Est)'
-  ]);
-  const binsPick = finPickMetric(rec, [
-    'Bins (Actual)',
-    'Total Bins (Tons)',
-    'EST Bins',
-    'RMA Bins',
-    'RMA Bins'
-  ]);
-  const binRatePick = finPickMetric(rec, [
-    '$ / Bin (Actual)',
-    '$/Bin (Est)',
-    '$ / Bin',
-    'Adjusted $/Bin'
-  ]);
-
-  let binRateVal = binRatePick ? binRatePick.value : null;
-  let binRateLabel = binRatePick ? binRatePick.metric : '$/Bin';
-  if (binRateVal == null && revPick && binsPick && binsPick.value) {
-    const revBlocks = [];
-    const binBlocks = [];
-    financialsRevenue.blocks.forEach(function(b) {
-      if (b.kind !== 'block' && b.kind !== 'old') return;
-      if (finNum((rec.values[revPick.metric] || {})[b.key]) != null) revBlocks.push(b.key);
-      if (finNum((rec.values[binsPick.metric] || {})[b.key]) != null) binBlocks.push(b.key);
-    });
-    const overlap = revBlocks.filter(function(k) { return binBlocks.indexOf(k) !== -1; }).length;
-    if (revBlocks.length && overlap / revBlocks.length >= 0.5) {
-      binRateVal = revPick.value / binsPick.value;
-      binRateLabel = '$/Bin';
+  function namedMetric(names) {
+    for (let i = 0; i < names.length; i++) {
+      const want = names[i].toLowerCase();
+      for (let j = 0; j < rec.metrics.length; j++) {
+        if (rec.metrics[j].trim().toLowerCase() === want) return rec.metrics[j];
+      }
     }
+    return null;
+  }
+  function blockVal(metric, key) {
+    if (!metric) return null;
+    return finNum((rec.values[metric] || {})[key]);
+  }
+  function firstBlockVal(names, key) {
+    for (let i = 0; i < names.length; i++) {
+      const m = namedMetric([names[i]]);
+      const n = blockVal(m, key);
+      if (n != null) return n;
+    }
+    return null;
   }
 
-  let cards = '';
-  if (revPick) {
-    cards += '<div><div class="chem-total-label">' + finEsc(revPick.metric) + '</div>' +
-      '<div class="chem-total-value fin-money">' + finFmt('money', revPick.value) + '</div></div>';
-  }
-  if (binsPick) {
-    cards += '<div><div class="chem-total-label">' + finEsc(binsPick.metric) + '</div>' +
-      '<div class="chem-total-value">' + finFmt('bins', binsPick.value) + '</div></div>';
-  }
-  if (binRateVal != null) {
-    cards += '<div><div class="chem-total-label">' + finEsc(binRateLabel) + '</div>' +
-      '<div class="chem-total-value">' + finFmt('money', binRateVal) + '</div></div>';
-  }
-  summary.innerHTML = cards || '<div class="filter-hint">No ranch totals for this year.</div>';
-
-  const prefer = [
-    'Bins (Actual)', 'EST Bins', 'Total Bins (Tons)',
-    '$ / Bin (Actual)', '$/Bin (Est)', '$ / Bin', 'Adjusted $/Bin',
-    'Revenue (Actual)', 'Adj Revenue (Est)', 'Revenue (Est)', 'Estimated Revenue',
-    'Total Revenue', 'Checks Received', 'Total Adjusted Revenue'
-  ];
-  const have = {};
-  rec.metrics.forEach(function(m) {
-    const vals = rec.values[m] || {};
-    if (Object.keys(vals).some(function(k) { return finNum(vals[k]) != null; })) have[m] = true;
-  });
-  const metrics = [];
-  prefer.forEach(function(m) {
-    rec.metrics.forEach(function(got) {
-      if (got.trim().toLowerCase() === m.toLowerCase() && have[got] && metrics.indexOf(got) < 0) metrics.push(got);
-    });
-  });
-  head.innerHTML = '<tr><th>Block</th><th>Variety</th><th>Acres</th>' +
-    metrics.map(function(m) { return '<th>' + finEsc(m) + '</th>'; }).join('') + '</tr>';
+  const binsNames = ['Bins (Actual)', 'EST Bins', 'Total Bins (Tons)', 'RMA Bins'];
+  const rateNames = ['$ / Bin (Actual)', '$/Bin (Est)', '$ / Bin', 'Adjusted $/Bin'];
+  const revNames = ['Revenue (Actual)', 'Adj Revenue (Est)', 'Revenue (Est)', 'Estimated Revenue', 'Total Revenue', 'Checks Received'];
 
   const rows = [];
   financialsRevenue.blocks.forEach(function(b) {
     if (b.kind === 'old' && !finBlockHasNumbers(rec, b.key)) return;
     if ((b.kind === 'other' || b.kind === 'olives') && !finBlockHasNonZero(rec, b.key)) return;
     if (b.kind === 'total') return;
-    if (b.kind === 'block') { rows.push(b); return; }
     rows.push(b);
   });
   const totalBlk = financialsRevenue.blocks.find(function(b) { return b.kind === 'total'; });
@@ -3740,20 +3691,55 @@ function renderFinancials() {
     return b.name.replace(/^block\s+/i, '');
   };
 
+  head.innerHTML = '<tr><th>Block</th><th>Variety</th><th>Acres</th><th>Bins</th><th>$/Bin</th><th>Revenue</th></tr>';
+
+  let ranchRev = 0;
+  let ranchBins = 0;
+  let anyRev = false;
+  let anyBins = false;
+
   body.innerHTML = rows.map(function(b) {
     const trClass = b.kind === 'total' ? ' class="row-total"' : '';
     const acres = b.acres == null ? '—' : finFmt('rate', b.acres);
-    let tds = '<td>' + finEsc(displayName(b)) + '</td>' +
+    const bins = firstBlockVal(binsNames, b.key);
+    let rate = firstBlockVal(rateNames, b.key);
+    const rev = firstBlockVal(revNames, b.key);
+    if (rate == null && rev != null && bins) rate = rev / bins;
+    if (b.kind !== 'total') {
+      if (rev != null) { ranchRev += rev; anyRev = true; }
+      if (bins != null) { ranchBins += bins; anyBins = true; }
+    }
+    return '<tr' + trClass + '>' +
+      '<td>' + finEsc(displayName(b)) + '</td>' +
       '<td>' + finEsc(b.kind === 'total' ? '' : (b.variety || '')) + '</td>' +
-      '<td class="fin-num">' + acres + '</td>';
-    metrics.forEach(function(m) {
-      const kind = finMetricKind(m);
-      const n = finNum((rec.values[m] || {})[b.key]);
-      const cls = 'fin-num' + (kind === 'money' ? ' fin-money' : '');
-      tds += '<td class="' + cls + '">' + (n == null ? '—' : finFmt(kind, n)) + '</td>';
-    });
-    return '<tr' + trClass + '>' + tds + '</tr>';
+      '<td class="fin-num">' + acres + '</td>' +
+      '<td class="fin-num">' + (bins == null ? '—' : finFmt('bins', bins)) + '</td>' +
+      '<td class="fin-num">' + (rate == null ? '—' : finFmt('money', rate)) + '</td>' +
+      '<td class="fin-num fin-money">' + (rev == null ? '—' : finFmt('money', rev)) + '</td>' +
+      '</tr>';
   }).join('');
+
+  const totRev = totalBlk ? firstBlockVal(revNames, totalBlk.key) : null;
+  const totBins = totalBlk ? firstBlockVal(binsNames, totalBlk.key) : null;
+  const showRev = totRev != null ? totRev : (anyRev ? ranchRev : null);
+  const showBins = totBins != null ? totBins : (anyBins ? ranchBins : null);
+  let showRate = totalBlk ? firstBlockVal(rateNames, totalBlk.key) : null;
+  if (showRate == null && showRev != null && showBins) showRate = showRev / showBins;
+
+  let cards = '';
+  if (showRev != null) {
+    cards += '<div><div class="chem-total-label">Ranch revenue</div>' +
+      '<div class="chem-total-value fin-money">' + finFmt('money', showRev) + '</div></div>';
+  }
+  if (showBins != null) {
+    cards += '<div><div class="chem-total-label">Bins</div>' +
+      '<div class="chem-total-value">' + finFmt('bins', showBins) + '</div></div>';
+  }
+  if (showRate != null) {
+    cards += '<div><div class="chem-total-label">$/Bin</div>' +
+      '<div class="chem-total-value">' + finFmt('money', showRate) + '</div></div>';
+  }
+  summary.innerHTML = cards;
 }
 
 
@@ -4495,7 +4481,7 @@ loadSprays();
 (function autoLoad() {
   const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
   const finUrl = new URL('financials-revenue.json', document.baseURI);
-  finUrl.searchParams.set('v', '3');
+  finUrl.searchParams.set('v', '4');
 
   function showManualUpload(msg) {
     document.getElementById('auto-load-ui').style.display = 'none';
