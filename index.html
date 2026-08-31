@@ -2081,14 +2081,17 @@ function updateCalendar() {
         const cls = v.replace(/ /g,'-').replace(/[^A-Z0-9-]/gi,'');
         return `<span class="cal-pill ${cls}">${v.replace('LATE NAVELS','LT NAVEL').replace('CLEMENTINES','CLEM').replace('GRAPEFRUIT','GFT')}</span>`;
       }).join('');
-      const blockSet = [];
+      const laborByBlock = {};
       labor.forEach(e => {
-        const b = String(e.block || '').trim();
-        if (b && blockSet.indexOf(b) < 0) blockSet.push(b);
+        const id = laborBlockId(e.block);
+        if (!id) return;
+        if (!laborByBlock[id]) laborByBlock[id] = [];
+        const w = String(e.work || '').trim();
+        if (w && laborByBlock[id].indexOf(w) < 0) laborByBlock[id].push(w);
       });
-      blockSet.sort(sortBlockIds);
-      const laborPills = blockSet.map(b =>
-        `<span class="cal-pill labor">Blk ${b}</span>`
+      const blockSet = Object.keys(laborByBlock).sort(sortBlockIds);
+      const laborPills = blockSet.map(id =>
+        `<span class="cal-pill labor">${chemEsc(laborPillLabel(id, laborByBlock[id]))}</span>`
       ).join('');
       const chemSeen = [];
       sprays.forEach(e => {
@@ -2259,6 +2262,22 @@ function laborRate(d) {
   if (d.rate == null || d.rate === '') return '—';
   const u = d.unit ? '/' + d.unit.replace(/s$/, '') : '';
   return laborMoney(d.rate) + u;
+}
+
+
+function laborBlockId(block) {
+  const b = String(block || '').trim();
+  if (!b || b === '—' || b.toLowerCase() === 'n/a') return '';
+  return b.replace(/^blk\.?\s*/i, '').trim();
+}
+
+function laborPillLabel(blockId, works) {
+  const id = laborBlockId(blockId) || String(blockId || '').trim();
+  const types = (works || []).filter(Boolean);
+  const unique = [];
+  types.forEach(function(t) { if (unique.indexOf(t) < 0) unique.push(t); });
+  unique.sort(function(a, b) { return a.localeCompare(b); });
+  return unique.length ? ('Blk ' + id + ': ' + unique.join('/')) : ('Blk ' + id);
 }
 
 function laborShortVendor(v) {
