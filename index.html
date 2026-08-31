@@ -1534,6 +1534,15 @@
   #labor-section #labor-compare-filter {
     font-size: 12px;
   }
+  #labor-section #labor-month-bars {
+    gap: 6px;
+  }
+  #labor-section #labor-month-bars .chem-bar-amt {
+    font-size: 9px;
+  }
+  #labor-section #labor-month-bars .water-bar {
+    width: 12px;
+  }
   @media (max-width: 640px) {
     #labor-section .chem-bars { height: 140px; gap: 3px; }
     #labor-section .chem-bar-amt { font-size: 8px; }
@@ -1650,7 +1659,8 @@
   <div id="labor-section" class="section">
     <div class="page-title">Contract Labor</div>
     <div class="filter-bar">
-      <span class="filter-label">Work</span>
+      <span class="filter-hint">Jan–Dec fiscal year. Crop-year bar does not apply here.</span>
+      <span class="filter-label" style="margin-left:8px">Work</span>
       <select id="labor-work-filter" onchange="renderLabor()"></select>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="labor-block-filter" onchange="renderLabor()"></select>
@@ -1671,6 +1681,14 @@
         </select>
       </div>
       <div id="labor-bars" class="chem-bars"></div>
+    </div>
+    <div id="labor-month-chart-wrap" class="chem-chart-wrap">
+      <div class="chem-chart-title">Cost by month</div>
+      <div class="water-legend">
+        <span><span class="water-swatch sel"></span> Selected</span>
+        <span><span class="water-swatch hist"></span> <span id="labor-month-compare-legend">2025</span></span>
+      </div>
+      <div id="labor-month-bars" class="chem-bars"></div>
     </div>
     <div class="table-wrap">
       <table>
@@ -2724,28 +2742,23 @@ function laborCoerceYear(yearF) {
   return String(yearF);
 }
 
-function laborPeriodMonths(selectedRows) {
+function laborPeriodMonths(yearF) {
   const range = getMonthRange();
-  if (range) {
-    const seen = {};
-    const months = [];
-    let y = parseInt(range.from.slice(0, 4), 10);
-    let m = parseInt(range.from.slice(5, 7), 10);
-    const ty = parseInt(range.to.slice(0, 4), 10);
-    const tm = parseInt(range.to.slice(5, 7), 10);
-    while (y < ty || (y === ty && m <= tm)) {
-      if (!seen[m]) { seen[m] = true; months.push(m); }
-      m += 1;
-      if (m > 12) { m = 1; y += 1; }
-    }
-    return months;
+  yearF = laborCoerceYear(yearF || laborSelectedYear());
+  if (!range) return [];
+  const seen = {};
+  const months = [];
+  let y = parseInt(range.from.slice(0, 4), 10);
+  let m = parseInt(range.from.slice(5, 7), 10);
+  const ty = parseInt(range.to.slice(0, 4), 10);
+  const tm = parseInt(range.to.slice(5, 7), 10);
+  const fy = parseInt(yearF, 10);
+  while (y < ty || (y === ty && m <= tm)) {
+    if (y === fy && !seen[m]) { seen[m] = true; months.push(m); }
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
   }
-  const monthSet = {};
-  (selectedRows || []).forEach(d => {
-    const m = laborMonthNum(d);
-    if (m) monthSet[m] = true;
-  });
-  return Object.keys(monthSet).map(Number).sort((a, b) => a - b);
+  return months;
 }
 
 let laborCompareReady = false;
@@ -2832,16 +2845,85 @@ function laborBarAmt(n) {
   return (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
 }
 
+function laborHistAvgByMonth(yearF, workF, blockF, months) {
+  const years = laborYearsInData();
+  yearF = laborCoerceYear(yearF);
+  const prior = years.filter(y => parseInt(y, 10) < parseInt(yearF, 10));
+  const acc = [0,0,0,0,0,0,0,0,0,0,0,0];
+  if (!prior.length) return acc;
+  prior.forEach(y => {
+    laborData.forEach(d => {
+      if (laborPaidYear(d) !== y) return;
+      if (workF !== 'all' && d.work !== workF) return;
+      if (blockF !== 'all' && d.block !== blockF) return;
+      const m = laborMonthNum(d);
+      if (!m || m < 1 || m > 12) return;
+      if (months.length && months.indexOf(m) < 0) return;
+      acc[m - 1] += (d.amount || 0);
+    });
+  });
+  const n = prior.length;
+  return acc.map(v => v / n);
+}
+
+function renderLaborMonthChart(selectedRows, yearF, workF, blockF, cmp, months) {
+  const bars = document.getElementById('labor-month-bars');
+  const legend = document.getElementById('labor-month-compare-legend');
+  if (!bars) return;
+  yearF = laborCoerceYear(yearF);
+  months = months || [];
+  const useCmpYear = cmp && cmp !== 'avg' && cmp !== 'all' && cmp !== yearF;
+  if (legend) legend.textContent = useCmpYear ? cmp : 'Historical average';
+  const monthLabs = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function inPeriod(m) {
+    return !months.length || months.indexOf(m) >= 0;
+  }
+  const selVals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  (selectedRows || []).forEach(d => {
+    const m = laborMonthNum(d);
+    if (m >= 1 && m <= 12 && inPeriod(m)) selVals[m - 1] += (d.amount || 0);
+  });
+  let cmpVals = [0,0,0,0,0,0,0,0,0,0,0,0];
+  if (useCmpYear) {
+    laborData.forEach(d => {
+      if (laborPaidYear(d) !== cmp) return;
+      if (workF !== 'all' && d.work !== workF) return;
+      if (blockF !== 'all' && d.block !== blockF) return;
+      const m = laborMonthNum(d);
+      if (m >= 1 && m <= 12 && inPeriod(m)) cmpVals[m - 1] += (d.amount || 0);
+    });
+  } else {
+    cmpVals = laborHistAvgByMonth(yearF, workF, blockF, months);
+  }
+  const max = Math.max.apply(null, selVals.concat(cmpVals).concat([1]));
+  bars.innerHTML = monthLabs.map(function(lab, i) {
+    const v = selVals[i];
+    const h = cmpVals[i];
+    const hs = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
+    const hh = h ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 2;
+    const zeroS = v ? '' : ' zero';
+    const zeroH = h ? '' : ' zero';
+    const tip = lab + ' selected ' + laborMoney(v) + ' · compare ' + laborMoney(h);
+    const amt = v ? laborBarAmt(v) : '';
+    return '<div class="chem-bar-col">' +
+      '<div class="chem-bar-amt">' + amt + '</div>' +
+      '<div class="water-bar-pair" title="' + chemEsc(tip) + '">' +
+      '<div class="water-bar sel' + zeroS + '" style="height:' + hs + 'px"></div>' +
+      '<div class="water-bar hist' + zeroH + '" style="height:' + hh + 'px"></div>' +
+      '</div>' +
+      '<div class="chem-bar-label">' + lab + '</div></div>';
+  }).join('');
+}
+
 function renderLaborChart(selectedRows, yearF, workF, blockF) {
   const bars = document.getElementById('labor-bars');
   const cmpSel = document.getElementById('labor-compare-filter');
   const legend = document.getElementById('labor-compare-legend');
   const line = document.getElementById('labor-compare-line');
-  if (!bars) return;
   yearF = laborCoerceYear(yearF);
   initLaborCompare(yearF);
   const cmp = cmpSel ? cmpSel.value : 'avg';
-  const months = laborPeriodMonths(selectedRows);
+  const months = laborPeriodMonths(yearF);
 
   let cmpByType = {};
   let cmpTotal = 0;
@@ -2910,6 +2992,8 @@ function renderLaborChart(selectedRows, yearF, workF, blockF) {
       compareHtml + '</div>';
   }
 
+  renderLaborMonthChart(selectedRows, yearF, workF, blockF, cmp, months);
+  if (!bars) return;
   if (!types.length) {
     bars.innerHTML = '';
     return;
@@ -2942,12 +3026,13 @@ function renderLabor() {
   let yearF = laborCoerceYear(laborSelectedYear());
   const workF = wsel.value;
   const blockF = bsel.value;
-  const range = getMonthRange();
+  const months = laborPeriodMonths(yearF);
   const rows = laborData.filter(d => {
     if (workF !== 'all' && d.work !== workF) return false;
     if (blockF !== 'all' && d.block !== blockF) return false;
-    if (range) return dateInRange(d.worked || d.paid);
-    return laborPaidYear(d) === yearF;
+    if (laborPaidYear(d) !== yearF) return false;
+    if (months.length && months.indexOf(laborMonthNum(d)) < 0) return false;
+    return true;
   });
   const tot = rows.reduce((s, d) => s + (d.amount || 0), 0);
   document.getElementById('labor-total').textContent = rows.length + ' jobs  ·  ' + laborMoney(tot);
