@@ -725,6 +725,104 @@
     color: var(--text-light);
     font-size: 13px;
   }
+  #financials-section .fin-th-block {
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  #financials-section .fin-th-var {
+    color: rgba(255,255,255,0.62);
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  #financials-section .chem-chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 14px;
+    margin-bottom: 22px;
+  }
+  #financials-section .chem-chart-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+  #financials-section .water-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  #financials-section .water-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  #financials-section .water-swatch.sel { background: var(--mid); }
+  #financials-section .water-swatch.hist {
+    background: #c5d1c6;
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+  #financials-section .chem-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 180px;
+  }
+  #financials-section .chem-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  #financials-section .chem-bar-label {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.15;
+  }
+  #financials-section .chem-bar-amt {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  #financials-section .water-bar-pair {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+  }
+  #financials-section .water-bar {
+    width: 12px;
+    max-width: 18px;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+  #financials-section .water-bar.sel { background: var(--mid); }
+  #financials-section .water-bar.hist { background: #c5d1c6; }
+  #financials-section .water-bar.zero { background: var(--border); }
 
   /* ── COMING SOON ── */
   .coming-soon {
@@ -1792,7 +1890,19 @@
     <div class="filter-bar">
       <span class="filter-label">Year</span>
       <select id="fin-year-filter" onchange="renderFinancials()"></select>
-      <span class="filter-hint">Revenue by block</span>
+      <span class="filter-label" style="margin-left:8px">Compare</span>
+      <select id="fin-compare-filter" onchange="renderFinancials()">
+        <option value="avg">Historical average</option>
+      </select>
+      <span class="filter-hint">Revenue by block. Average is the prior 5 years.</span>
+    </div>
+    <div id="fin-chart-wrap" class="chem-chart-wrap">
+      <div class="chem-chart-title">Revenue by block</div>
+      <div class="water-legend">
+        <span><span class="water-swatch sel"></span> Selected</span>
+        <span><span class="water-swatch hist"></span> <span id="fin-compare-legend">Historical average</span></span>
+      </div>
+      <div id="fin-bars" class="chem-bars"></div>
     </div>
     <div class="table-wrap">
       <table>
@@ -3626,6 +3736,117 @@ function finPopulateYearFilter() {
   }
 }
 
+function finBlockLabel(b) {
+  if (!b) return '';
+  if (b.kind === 'total' || b.kind === 'other' || b.kind === 'olives') return b.name;
+  return String(b.name || '').replace(/^block\s+/i, '').replace(/\s*\([^)]*\)\s*/g, '').trim();
+}
+
+function finYearNum(y) {
+  const n = parseInt(String(y), 10);
+  return isFinite(n) ? n : 0;
+}
+
+function finBlockRevenue(rec, key) {
+  if (!rec) return null;
+  const names = ['Revenue (Actual)', 'Adj Revenue (Est)', 'Revenue (Est)', 'Estimated Revenue', 'Total Revenue', 'Checks Received'];
+  for (let i = 0; i < names.length; i++) {
+    const want = names[i].toLowerCase();
+    for (let j = 0; j < rec.metrics.length; j++) {
+      if (rec.metrics[j].trim().toLowerCase() === want) {
+        const n = finNum((rec.values[rec.metrics[j]] || {})[key]);
+        if (n != null) return n;
+      }
+    }
+  }
+  return null;
+}
+
+let finCompareReady = false;
+
+function initFinCompare(year) {
+  const sel = document.getElementById('fin-compare-filter');
+  if (!sel) return 'avg';
+  const years = financialsRevenue.years.map(function(y) { return y.year; });
+  const others = years.filter(function(y) { return y !== year; });
+  const prev = sel.value || 'avg';
+  sel.innerHTML = '<option value="avg">Historical average</option>';
+  others.forEach(function(y) {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = y;
+    sel.appendChild(o);
+  });
+  function pickDefault() {
+    if ((year === '2026E' || year === '2026') && others.indexOf('2025') >= 0) return '2025';
+    return 'avg';
+  }
+  if (!finCompareReady) {
+    finCompareReady = true;
+    sel.value = pickDefault();
+  } else if (prev !== year && [...sel.options].some(function(o) { return o.value === prev; })) {
+    sel.value = prev;
+  } else {
+    sel.value = pickDefault();
+  }
+  return sel.value;
+}
+
+function finPriorYears(year, n) {
+  const yn = finYearNum(year);
+  const cands = financialsRevenue.years
+    .map(function(y) { return y.year; })
+    .filter(function(y) { return finYearNum(y) < yn && !/e$/i.test(y); })
+    .sort(function(a, b) { return finYearNum(b) - finYearNum(a); });
+  return cands.slice(0, n);
+}
+
+function finHistAvgRevenue(key, year) {
+  const priors = finPriorYears(year, 5);
+  let sum = 0;
+  let count = 0;
+  priors.forEach(function(y) {
+    const rec = financialsRevenue.years.find(function(r) { return r.year === y; });
+    const n = finBlockRevenue(rec, key);
+    if (n == null) return;
+    sum += n;
+    count += 1;
+  });
+  return count ? sum / count : 0;
+}
+
+function renderFinChart(year, rec, cols) {
+  const bars = document.getElementById('fin-bars');
+  const legend = document.getElementById('fin-compare-legend');
+  if (!bars) return;
+  const cmp = initFinCompare(year);
+  const useYear = cmp && cmp !== 'avg' && cmp !== year;
+  if (legend) legend.textContent = useYear ? cmp : 'Historical average';
+  const cmpRec = useYear ? financialsRevenue.years.find(function(y) { return y.year === cmp; }) : null;
+  const chartCols = cols.filter(function(b) { return b.kind === 'block' || b.kind === 'old'; });
+  const selVals = chartCols.map(function(b) { return finBlockRevenue(rec, b.key) || 0; });
+  const cmpVals = chartCols.map(function(b) {
+    if (useYear) return finBlockRevenue(cmpRec, b.key) || 0;
+    return finHistAvgRevenue(b.key, year);
+  });
+  const max = Math.max.apply(null, selVals.concat(cmpVals).concat([1]));
+  bars.innerHTML = chartCols.map(function(b, i) {
+    const v = selVals[i];
+    const h = cmpVals[i];
+    const hs = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
+    const hh = h ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 2;
+    const amt = v ? ((v < 0 ? '-$' : '$') + Math.round(Math.abs(v)).toLocaleString('en-US')) : '';
+    return '<div class="chem-bar-col">' +
+      '<div class="chem-bar-amt">' + amt + '</div>' +
+      '<div class="water-bar-pair">' +
+      '<div class="water-bar sel' + (v ? '' : ' zero') + '" style="height:' + hs + 'px" title="' + finEsc(finBlockLabel(b)) + ' selected ' + finFmt('money', v) + '"></div>' +
+      '<div class="water-bar hist' + (h ? '' : ' zero') + '" style="height:' + hh + 'px" title="' + finEsc(finBlockLabel(b)) + ' compare ' + finFmt('money', h) + '"></div>' +
+      '</div>' +
+      '<div class="chem-bar-label">' + finEsc(finBlockLabel(b)) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
 function renderFinancials() {
   const summary = document.getElementById('fin-summary');
   const head = document.getElementById('fin-head');
@@ -3642,6 +3863,8 @@ function renderFinancials() {
     summary.innerHTML = '';
     head.innerHTML = '';
     body.innerHTML = '';
+    const bars = document.getElementById('fin-bars');
+    if (bars) bars.innerHTML = '';
     if (empty) {
       empty.style.display = 'block';
       empty.textContent = financialsRevenue.years.length ? 'No Revenue data for this year.' : 'Financials.xlsx not loaded.';
@@ -3659,14 +3882,10 @@ function renderFinancials() {
     }
     return null;
   }
-  function blockVal(metric, key) {
-    if (!metric) return null;
-    return finNum((rec.values[metric] || {})[key]);
-  }
   function firstBlockVal(names, key) {
     for (let i = 0; i < names.length; i++) {
       const m = namedMetric([names[i]]);
-      const n = blockVal(m, key);
+      const n = m ? finNum((rec.values[m] || {})[key]) : null;
       if (n != null) return n;
     }
     return null;
@@ -3686,30 +3905,22 @@ function renderFinancials() {
   const totalBlk = financialsRevenue.blocks.find(function(b) { return b.kind === 'total'; });
   if (totalBlk && finBlockHasNumbers(rec, totalBlk.key)) cols.push(totalBlk);
 
-  const displayName = function(b) {
-    if (b.kind === 'total' || b.kind === 'other' || b.kind === 'olives') return b.name;
-    return b.name.replace(/^block\s+/i, '');
-  };
-
   head.innerHTML = '<tr><th></th>' + cols.map(function(b) {
-    return '<th>' + finEsc(displayName(b)) + '</th>';
+    const label = finBlockLabel(b);
+    const variety = (b.kind === 'total' || b.kind === 'other' || b.kind === 'olives') ? '' : (b.variety || '');
+    return '<th><div class="fin-th-block">' + finEsc(label) + '</div>' +
+      (variety ? '<div class="fin-th-var">' + finEsc(variety) + '</div>' : '') +
+      '</th>';
   }).join('') + '</tr>';
 
   function metricRow(label, cells) {
     return '<tr><td>' + finEsc(label) + '</td>' + cells.join('') + '</tr>';
   }
-  function numCell(kind, n, extra) {
-    const cls = 'fin-num' + (kind === 'money' ? ' fin-money' : '') + (extra || '');
+  function numCell(kind, n) {
+    const cls = 'fin-num' + (kind === 'money' ? ' fin-money' : '');
     return '<td class="' + cls + '">' + (n == null ? '—' : finFmt(kind, n)) + '</td>';
   }
 
-  const varietyCells = cols.map(function(b) {
-    const v = b.kind === 'total' ? '' : (b.variety || '');
-    return '<td>' + finEsc(v) + '</td>';
-  });
-  const acresCells = cols.map(function(b) {
-    return numCell('rate', b.acres);
-  });
   const binsCells = cols.map(function(b) {
     return numCell('bins', firstBlockVal(binsNames, b.key));
   });
@@ -3725,11 +3936,11 @@ function renderFinancials() {
   });
 
   body.innerHTML =
-    metricRow('Variety', varietyCells) +
-    metricRow('Acres', acresCells) +
     metricRow('Bins', binsCells) +
     metricRow('$/Bin', rateCells) +
     metricRow('Revenue', revCells);
+
+  renderFinChart(year, rec, cols);
 
   const totRev = totalBlk ? firstBlockVal(revNames, totalBlk.key) : null;
   const totBins = totalBlk ? firstBlockVal(binsNames, totalBlk.key) : null;
@@ -4501,7 +4712,7 @@ loadSprays();
 (function autoLoad() {
   const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
   const finUrl = new URL('financials-revenue.json', document.baseURI);
-  finUrl.searchParams.set('v', '5');
+  finUrl.searchParams.set('v', '6');
 
   function showManualUpload(msg) {
     document.getElementById('auto-load-ui').style.display = 'none';
