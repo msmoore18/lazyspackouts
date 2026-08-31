@@ -1374,6 +1374,104 @@
   #water-section .water-bar.sel { background: var(--mid); }
   #water-section .water-bar.hist { background: #c5d1c6; }
   #water-section .water-bar.zero { background: var(--border); }
+  #labor-section .chem-compare {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+  #labor-section .chem-compare.up { color: #c62828; }
+  #labor-section .chem-compare.down { color: #2e7d32; }
+  #labor-section .chem-chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 14px;
+    margin-bottom: 22px;
+  }
+  #labor-section .chem-chart-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+  #labor-section .water-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  #labor-section .water-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  #labor-section .water-swatch.sel { background: var(--mid); }
+  #labor-section .water-swatch.hist {
+    background: #c5d1c6;
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+  #labor-section .chem-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 180px;
+  }
+  #labor-section .chem-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  #labor-section .chem-bar-label {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    color: var(--text-light);
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.2;
+  }
+  #labor-section .chem-bar-amt {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  #labor-section .water-bar-pair {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+  }
+  #labor-section .water-bar {
+    width: 14px;
+    max-width: 22px;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+  #labor-section .water-bar.sel { background: var(--mid); }
+  #labor-section .water-bar.hist { background: #c5d1c6; }
+  #labor-section .water-bar.zero { background: var(--border); }
+  #labor-section #labor-compare-filter {
+    font-size: 12px;
+  }
+  @media (max-width: 640px) {
+    #labor-section .chem-bars { height: 140px; gap: 3px; }
+    #labor-section .chem-bar-amt { font-size: 8px; }
+    #labor-section .water-bar { width: 10px; }
+  }
+
   @media (max-width: 640px) {
     #water-section .chem-total-value { font-size: 26px; }
     #water-section .chem-bars { height: 140px; gap: 3px; }
@@ -1490,7 +1588,22 @@
       <select id="labor-work-filter" onchange="renderLabor()"></select>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="labor-block-filter" onchange="renderLabor()"></select>
-      <div style="margin-left:auto;font-size:13px;color:var(--text-light)" id="labor-total"></div>
+      <div style="margin-left:auto;text-align:right">
+        <div id="labor-total" style="font-size:13px;color:var(--text-light)"></div>
+        <div id="labor-compare-line" class="chem-compare"></div>
+      </div>
+    </div>
+    <div id="labor-chart-wrap" class="chem-chart-wrap">
+      <div class="chem-chart-title">Cost by work type</div>
+      <div class="water-legend">
+        <span><span class="water-swatch sel"></span> Selected</span>
+        <span><span class="water-swatch hist"></span> <span id="labor-compare-legend">Historical average</span></span>
+        <span class="filter-label" style="margin-left:4px">Compare</span>
+        <select id="labor-compare-filter" onchange="renderLabor()">
+          <option value="avg">Historical average</option>
+        </select>
+      </div>
+      <div id="labor-bars" class="chem-bars"></div>
     </div>
     <div class="table-wrap">
       <table>
@@ -2462,6 +2575,7 @@ function laborShortVendor(v) {
   if (s.includes('Paragon')) return 'Paragon';
   if (s.includes('Foothill')) return 'Foothill Ag';
   if (s.includes('High Sierra')) return 'High Sierra';
+  if (s.includes('NC Ag')) return 'NC Ag';
   return s;
 }
 
@@ -2504,6 +2618,192 @@ function initLaborFilters() {
   if ([...bsel.options].some(o => o.value === prevB)) bsel.value = prevB;
 }
 
+
+function laborPaidYear(d) {
+  return String(d.paid || '').slice(0, 4);
+}
+
+function laborWorkDate(d) {
+  return d.worked || d.paid || '';
+}
+
+function laborMonthNum(d) {
+  return parseInt(String(laborWorkDate(d)).slice(5, 7), 10) || 0;
+}
+
+function laborYearsInData() {
+  return [...new Set(laborData.map(laborPaidYear))].filter(Boolean).sort();
+}
+
+function initLaborCompare() {
+  const sel = document.getElementById('labor-compare-filter');
+  const ysel = document.getElementById('labor-year-filter');
+  if (!sel || !ysel) return;
+  const yearF = ysel.value;
+  const years = laborYearsInData();
+  const others = yearF === 'all' ? years : years.filter(y => y !== yearF);
+  const prev = sel.value || 'avg';
+  sel.innerHTML = '<option value="avg">Historical average</option>';
+  others.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = y;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else sel.value = 'avg';
+}
+
+function laborByType(rows) {
+  const m = {};
+  rows.forEach(d => {
+    const k = d.work || 'Other';
+    m[k] = (m[k] || 0) + (d.amount || 0);
+  });
+  return m;
+}
+
+function laborCompareRows(yearF, workF, blockF, months, cmp) {
+  const years = laborYearsInData();
+  const latest = years.length ? years[years.length - 1] : '';
+  function passFilters(d) {
+    if (workF !== 'all' && d.work !== workF) return false;
+    if (blockF !== 'all' && d.block !== blockF) return false;
+    if (months.length && months.indexOf(laborMonthNum(d)) < 0) return false;
+    return true;
+  }
+  if (cmp && cmp !== 'avg') {
+    return laborData.filter(d => laborPaidYear(d) === cmp && passFilters(d));
+  }
+  const prior = yearF === 'all'
+    ? years.filter(y => y !== latest)
+    : years.filter(y => y !== yearF);
+  return { priorYears: prior, passFilters: passFilters };
+}
+
+function laborHistAvgByType(yearF, workF, blockF, months) {
+  const years = laborYearsInData();
+  const latest = years.length ? years[years.length - 1] : '';
+  const prior = yearF === 'all'
+    ? years.filter(y => y !== latest)
+    : years.filter(y => y !== yearF);
+  const acc = {};
+  if (!prior.length) return { byType: acc, years: prior, total: 0 };
+  prior.forEach(y => {
+    const rows = laborData.filter(d => {
+      if (laborPaidYear(d) !== y) return false;
+      if (workF !== 'all' && d.work !== workF) return false;
+      if (blockF !== 'all' && d.block !== blockF) return false;
+      if (months.length && months.indexOf(laborMonthNum(d)) < 0) return false;
+      return true;
+    });
+    const t = laborByType(rows);
+    Object.keys(t).forEach(k => { acc[k] = (acc[k] || 0) + t[k]; });
+  });
+  const n = prior.length;
+  const byType = {};
+  Object.keys(acc).forEach(k => { byType[k] = acc[k] / n; });
+  const total = Object.keys(byType).reduce((s, k) => s + byType[k], 0);
+  return { byType: byType, years: prior, total: total };
+}
+
+function laborBarAmt(n) {
+  if (!n) return '';
+  return (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+}
+
+function renderLaborChart(selectedRows, yearF, workF, blockF) {
+  const bars = document.getElementById('labor-bars');
+  const cmpSel = document.getElementById('labor-compare-filter');
+  const legend = document.getElementById('labor-compare-legend');
+  const line = document.getElementById('labor-compare-line');
+  if (!bars) return;
+  initLaborCompare();
+  const cmp = cmpSel ? cmpSel.value : 'avg';
+  const monthSet = {};
+  selectedRows.forEach(d => {
+    const m = laborMonthNum(d);
+    if (m) monthSet[m] = true;
+  });
+  const months = Object.keys(monthSet).map(Number).sort((a, b) => a - b);
+
+  let cmpByType = {};
+  let cmpTotal = 0;
+  let cmpLabel = 'historical average';
+  if (cmp && cmp !== 'avg') {
+    const rows = laborData.filter(d => {
+      if (laborPaidYear(d) !== cmp) return false;
+      if (workF !== 'all' && d.work !== workF) return false;
+      if (blockF !== 'all' && d.block !== blockF) return false;
+      if (months.length && months.indexOf(laborMonthNum(d)) < 0) return false;
+      return true;
+    });
+    cmpByType = laborByType(rows);
+    cmpTotal = rows.reduce((s, d) => s + (d.amount || 0), 0);
+    cmpLabel = cmp;
+  } else {
+    const hist = laborHistAvgByType(yearF, workF, blockF, months);
+    cmpByType = hist.byType;
+    cmpTotal = hist.total;
+    cmpLabel = 'historical average';
+  }
+  if (legend) legend.textContent = cmp === 'avg' ? 'Historical average' : cmp;
+
+  const selByType = laborByType(selectedRows);
+  const types = [...new Set(Object.keys(selByType).concat(Object.keys(cmpByType)))];
+  types.sort((a, b) => {
+    const sa = selByType[a] || 0;
+    const sb = selByType[b] || 0;
+    if (!sa && sb) return 1;
+    if (sa && !sb) return -1;
+    if (sb !== sa) return sb - sa;
+    return (cmpByType[b] || 0) - (cmpByType[a] || 0);
+  });
+
+  const selTot = selectedRows.reduce((s, d) => s + (d.amount || 0), 0);
+  if (line) {
+    if (!types.length) {
+      line.className = 'chem-compare';
+      line.textContent = '';
+    } else {
+      const diff = selTot - cmpTotal;
+      const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+      const sign = diff > 0 ? '+' : '';
+      let pctBit = '';
+      if (cmpTotal) {
+        const pct = (diff / cmpTotal) * 100;
+        const psign = pct > 0 ? '+' : '';
+        pctBit = ' (' + psign + pct.toFixed(0) + '%)';
+      }
+      line.className = 'chem-compare ' + dir;
+      line.textContent = sign + laborMoney(diff) + ' vs ' + cmpLabel + pctBit;
+    }
+  }
+
+  if (!types.length) {
+    bars.innerHTML = '';
+    return;
+  }
+  const max = Math.max.apply(null, types.map(t => Math.max(selByType[t] || 0, cmpByType[t] || 0)).concat([1]));
+  bars.innerHTML = types.map(t => {
+    const v = selByType[t] || 0;
+    const h = cmpByType[t] || 0;
+    const hs = v ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 2;
+    const hh = h ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 2;
+    const zeroS = v ? '' : ' zero';
+    const zeroH = h ? '' : ' zero';
+    const tip = t + ' selected ' + laborMoney(v) + ' · compare ' + laborMoney(h);
+    const amt = v ? laborBarAmt(v) : '';
+    return '<div class="chem-bar-col">' +
+      '<div class="chem-bar-amt">' + amt + '</div>' +
+      '<div class="water-bar-pair" title="' + chemEsc(tip) + '">' +
+      '<div class="water-bar sel' + zeroS + '" style="height:' + hs + 'px"></div>' +
+      '<div class="water-bar hist' + zeroH + '" style="height:' + hh + 'px"></div>' +
+      '</div>' +
+      '<div class="chem-bar-label">' + chemEsc(t) + '</div></div>';
+  }).join('');
+}
+
 function renderLabor() {
   const ysel = document.getElementById('labor-year-filter');
   if (!ysel) return;
@@ -2532,6 +2832,7 @@ function renderLabor() {
       '<td>' + laborMoney(d.amount || 0) + '</td>' +
     '</tr>'
   ).join('');
+  renderLaborChart(rows, yearF, workF, blockF);
 }
 
 function parseWorkbook(wb) {
