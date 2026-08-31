@@ -1818,7 +1818,11 @@
       <div id="water-chart-title" class="chem-chart-title">Monthly use (acre-feet)</div>
       <div class="water-legend">
         <span><span class="water-swatch sel"></span>Selected</span>
-        <span><span class="water-swatch hist"></span>Historical average</span>
+        <span><span class="water-swatch hist"></span><span id="water-compare-legend">Historical average</span></span>
+        <span class="filter-label" style="margin-left:4px">Compare</span>
+        <select id="water-compare-filter" onchange="renderWater()">
+          <option value="avg">Historical average</option>
+        </select>
       </div>
       <div id="water-bars" class="chem-bars"></div>
     </div>
@@ -3799,7 +3803,53 @@ function waterFmtAf(n) {
 }
 
 function onWaterYearChange() {
+  waterCompareReady = false;
   renderWater();
+}
+
+function waterYearsInData() {
+  const years = [];
+  waterData.forEach(function(r) {
+    const y = r.WaterYear;
+    if (y && years.indexOf(y) < 0) years.push(y);
+  });
+  years.sort(function(a, b) { return a - b; });
+  return years;
+}
+
+let waterCompareReady = false;
+
+function initWaterCompare(year) {
+  const sel = document.getElementById('water-compare-filter');
+  if (!sel) return;
+  const years = waterYearsInData();
+  const others = years.filter(function(y) { return y !== year; });
+  const prev = sel.value || 'avg';
+  sel.innerHTML = '<option value="avg">Historical average</option>';
+  others.forEach(function(y) {
+    const o = document.createElement('option');
+    o.value = String(y);
+    o.textContent = String(y);
+    sel.appendChild(o);
+  });
+  function pickDefault() {
+    if (year === 2026 && others.indexOf(2025) >= 0) return '2025';
+    return 'avg';
+  }
+  if (!waterCompareReady) {
+    waterCompareReady = true;
+    sel.value = pickDefault();
+  } else if (prev !== String(year) && [...sel.options].some(function(o) { return o.value === prev; })) {
+    sel.value = prev;
+  } else {
+    sel.value = pickDefault();
+  }
+}
+
+function waterMonthAf(year, month) {
+  return waterData.filter(function(r) {
+    return r.WaterYear === year && r.Month === month;
+  }).reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
 }
 
 function renderWater() {
@@ -3827,25 +3877,29 @@ function renderWater() {
   rows.forEach(function(r) { monthSet[r.Month] = true; });
   const selectedMonths = monthNums.filter(function(m) { return monthSet[m]; });
 
-  const priorYears = [];
-  waterData.forEach(function(r) {
-    if (r.WaterYear < year && r.Month >= 3 && priorYears.indexOf(r.WaterYear) === -1) priorYears.push(r.WaterYear);
-  });
+  initWaterCompare(year);
+  const cmpSel = document.getElementById('water-compare-filter');
+  const cmp = cmpSel ? cmpSel.value : 'avg';
+  const cmpYear = (cmp && cmp !== 'avg') ? parseInt(cmp, 10) : 0;
+  const priorYears = waterYearsInData().filter(function(y) { return y < year; });
+  const legend = document.getElementById('water-compare-legend');
+  const cmpIsYear = cmpYear && cmpYear !== year;
+  if (legend) legend.textContent = cmpIsYear ? String(cmpYear) : 'Historical average';
+
+  function compareMonthAf(m) {
+    if (cmpIsYear) return waterMonthAf(cmpYear, m);
+    if (!priorYears.length) return 0;
+    let sum = 0;
+    priorYears.forEach(function(py) { sum += waterMonthAf(py, m); });
+    return sum / priorYears.length;
+  }
 
   let compareHtml = '';
-  if (!priorYears.length) {
+  if (!cmpIsYear && !priorYears.length) {
     compareHtml = '<div class="chem-compare">— vs historical average</div>';
   } else if (rows.length) {
-    let histTotal = 0;
-    selectedMonths.forEach(function(m) {
-      let sum = 0;
-      priorYears.forEach(function(py) {
-        sum += waterData.filter(function(r) {
-          return r.WaterYear === py && r.Month === m;
-        }).reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
-      });
-      histTotal += sum / priorYears.length;
-    });
+    let cmpTotal = 0;
+    selectedMonths.forEach(function(m) { cmpTotal += compareMonthAf(m); });
     let spanLabel = '';
     if (range) {
       spanLabel = formatRangeLabel(range);
@@ -3853,17 +3907,18 @@ function renderWater() {
       const a = selectedMonths[0], b = selectedMonths[selectedMonths.length - 1];
       spanLabel = a === b ? MONTHS[a] : (MONTHS[a] + '–' + MONTHS[b]);
     }
-    const diff = used - histTotal;
+    const diff = used - cmpTotal;
     const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
     const sign = diff > 0 ? '+' : '';
     let pctBit = '';
-    if (histTotal) {
-      const pct = (diff / histTotal) * 100;
+    if (cmpTotal) {
+      const pct = (diff / cmpTotal) * 100;
       const psign = pct > 0 ? '+' : '';
       pctBit = ' (' + psign + pct.toFixed(0) + '%)';
     }
+    const cmpLabel = cmpIsYear ? String(cmpYear) : 'historical average';
     compareHtml = '<div class="chem-compare ' + dir + '">' +
-      sign + waterFmtAf(diff) + ' AF vs historical average' +
+      sign + waterFmtAf(diff) + ' AF vs ' + cmpLabel +
       (spanLabel ? ' ' + spanLabel : '') + pctBit + '</div>';
   }
 
@@ -3896,14 +3951,7 @@ function renderWater() {
       .reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
   });
   const histVals = monthNums.map(function(m) {
-    if (!priorYears.length) return 0;
-    let sum = 0;
-    priorYears.forEach(function(py) {
-      sum += waterData.filter(function(r) {
-        return r.WaterYear === py && r.Month === m;
-      }).reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
-    });
-    return sum / priorYears.length;
+    return compareMonthAf(m);
   });
 
   const max = Math.max.apply(null, selVals.concat(histVals).concat([1]));
@@ -3916,7 +3964,7 @@ function renderWater() {
     const hh = h ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 2;
     const zeroS = v ? '' : ' zero';
     const zeroH = h ? '' : ' zero';
-    const tip = lab + ' selected ' + waterFmtAf(v) + ' AF · hist avg ' + waterFmtAf(h) + ' AF';
+    const tip = lab + ' selected ' + waterFmtAf(v) + ' AF · compare ' + waterFmtAf(h) + ' AF';
     const amt = v ? v.toFixed(1) : '';
     return '<div class="chem-bar-col">' +
       '<div class="chem-bar-amt">' + amt + '</div>' +
