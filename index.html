@@ -524,14 +524,23 @@
 
   .cal-cell.has-data .cal-day-num { color: var(--dark); }
 
+  .cal-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: flex-start;
+  }
   .cal-pill {
     display: inline-block;
     font-size: 10px;
     font-weight: 500;
     padding: 1px 5px;
     border-radius: 3px;
-    margin: 1px 1px 0 0;
-    white-space: nowrap;
+    margin: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
   }
 
   .cal-pill.CLEMENTINES { background: #fff3e0; color: #e65100; }
@@ -561,6 +570,9 @@
     background: #1a7a64;
     color: #fff;
     font-weight: 600;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .cal-legend {
@@ -2519,7 +2531,7 @@ function updateCalendar() {
       const extra = (harvest.length ? ' has-harvest' : '') + (labor.length ? ' has-labor' : '') + (sprays.length ? ' has-spray' : '');
       html += `<div class="cal-cell has-data${extra}" onclick="showDayDetail(${day},${month},${year})">
         <div class="cal-day-num">${day}</div>
-        <div>${sprayPills}${harvestPills}${laborPills}</div>
+        <div class="cal-pills">${sprayPills}${harvestPills}${laborPills}</div>
         <div class="cal-fb">${foot.join(' · ')}</div>
       </div>`;
     } else {
