@@ -2242,10 +2242,10 @@
     <div class="filter-bar">
       <span class="filter-label">Rate schedule</span>
       <select id="electric-schedule-filter" onchange="renderElectric()"></select>
-      <span class="filter-hint">Picks a schedule across all meters. Well 1 is AGA2, which is why only that one filled before.</span>
+      <span class="filter-hint">Yearly charts ignore the meter picker. All schedules is the ranch total.</span>
     </div>
     <div class="chem-chart-wrap">
-      <div class="chem-chart-title">Charges by year</div>
+      <div id="electric-mix-title" class="chem-chart-title">Charges by year</div>
       <div class="water-legend">
         <span><span class="water-swatch elec-swatch customer"></span>Customer</span>
         <span><span class="water-swatch elec-swatch demand"></span>Demand</span>
@@ -5371,7 +5371,6 @@ function electricRowsScoped(meter, year) {
     if (sched && sched !== 'all') {
       return electricRateCode(r.rateSchedule) === sched;
     }
-    if (meter && meter !== 'all' && r.displayName !== meter) return false;
     return true;
   });
 }
@@ -5404,6 +5403,13 @@ function electricLastMonthScoped(meter, year) {
 }
 function renderElectricYearly(meter) {
   initElectricScheduleFilter();
+  const mixTitle = document.getElementById('electric-mix-title');
+  if (mixTitle) {
+    const sched = electricSelectedSchedule();
+    mixTitle.textContent = (sched && sched !== 'all')
+      ? 'Charges by year · ' + sched + ' (all meters)'
+      : 'Charges by year · all meters';
+  }
   const years = electricYearsInData().slice().sort(function(a, b) { return a - b; });
   const mixEl = document.getElementById('electric-mix-bars');
   const rateEl = document.getElementById('electric-rate-bars');
