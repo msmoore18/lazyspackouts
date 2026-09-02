@@ -5036,9 +5036,13 @@ function electricMonthTotal(name, year, month) {
     return s + (r.billedTotal || 0);
   }, 0);
 }
+function electricUsageOf(r) {
+  if (r && r.imports != null) return Math.abs(r.imports);
+  return r && r.totalKwh != null ? r.totalKwh : 0;
+}
 function electricMonthUsage(name, year, month) {
   return electricMonthRows(name, year, month).reduce(function(s, r) {
-    return s + (r.totalKwh || 0);
+    return s + electricUsageOf(r);
   }, 0);
 }
 function electricMonthMetric(name, year, month) {
@@ -5238,7 +5242,7 @@ function renderElectric() {
     return electricYear(r) === year && inScope(r);
   });
   const totDol = yearRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
-  const totKwh = yearRows.reduce(function(s, r) { return s + (r.totalKwh || 0); }, 0);
+  const totKwh = yearRows.reduce(function(s, r) { return s + electricUsageOf(r); }, 0);
   let compareHtml = '';
   if (cmpYear) {
     const cmpRows = electricData.filter(function(r) {
