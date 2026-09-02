@@ -1781,6 +1781,40 @@
     color: var(--text-light);
     margin-bottom: 10px;
   }
+  #electric-section .elec-chart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  #electric-section .elec-chart-head .chem-chart-title { margin-bottom: 0; }
+  #electric-section .chem-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #electric-section .chem-view-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #electric-section .chem-view-btn:hover { border-color: var(--mid); color: var(--text); }
+  #electric-section .chem-view-btn.active {
+    background: var(--dark);
+    color: white;
+    border-color: var(--dark);
+  }
   #electric-section .water-legend {
     display: flex;
     flex-wrap: wrap;
@@ -2154,7 +2188,13 @@
     </div>
     <div id="electric-summary" class="chem-summary"></div>
     <div class="chem-chart-wrap">
-      <div id="electric-chart-title" class="chem-chart-title">SAID billed total ($)</div>
+      <div class="elec-chart-head">
+        <div id="electric-chart-title" class="chem-chart-title">Billed total ($)</div>
+        <div class="chem-view-toggle" role="group" aria-label="Electric chart metric">
+          <button type="button" class="chem-view-btn active" id="electric-view-billed" onclick="setElectricChartView('billed')">Billed</button>
+          <button type="button" class="chem-view-btn" id="electric-view-usage" onclick="setElectricChartView('usage')">Usage</button>
+        </div>
+      </div>
       <div class="water-legend">
         <span><span class="water-swatch sel"></span>Selected</span>
         <span><span class="water-swatch hist"></span><span id="electric-compare-legend">2025</span></span>
@@ -4928,6 +4968,25 @@ function electricMonthTotal(name, year, month) {
     return s + (r.billedTotal || 0);
   }, 0);
 }
+function electricMonthUsage(name, year, month) {
+  return electricMonthRows(name, year, month).reduce(function(s, r) {
+    return s + (r.totalKwh || 0);
+  }, 0);
+}
+function electricMonthMetric(name, year, month) {
+  return electricChartView === 'usage'
+    ? electricMonthUsage(name, year, month)
+    : electricMonthTotal(name, year, month);
+}
+function electricFmtMetric(n) {
+  if (n == null) return '';
+  if (electricChartView === 'usage') {
+    const abs = Math.abs(n);
+    const s = Math.round(abs).toLocaleString('en-US');
+    return (n < 0 ? '-' : '') + s + ' kWh';
+  }
+  return electricBarAmt(n);
+}
 function electricLastMonth(name, year) {
   let last = 0;
   for (let m = 1; m <= 12; m++) {
@@ -4957,6 +5016,16 @@ function electricFmtKw(n) {
 
 let electricFiltersReady = false;
 let electricCompareReady = false;
+let electricChartView = 'billed';
+
+function setElectricChartView(view) {
+  electricChartView = view === 'usage' ? 'usage' : 'billed';
+  const billedBtn = document.getElementById('electric-view-billed');
+  const usageBtn = document.getElementById('electric-view-usage');
+  if (billedBtn) billedBtn.classList.toggle('active', electricChartView === 'billed');
+  if (usageBtn) usageBtn.classList.toggle('active', electricChartView === 'usage');
+  renderElectric();
+}
 
 function onElectricYearChange() {
   electricCompareReady = false;
@@ -5123,25 +5192,28 @@ function renderElectric() {
     '<div class="water-metric"><div class="chem-total-label">Usage' + (ytd ? ' YTD' : '') + '</div>' +
     '<div class="chem-total-value">' + electricFmtKwh(totKwh) + '</div></div>';
 
+  const title = document.getElementById('electric-chart-title');
+  if (title) title.textContent = electricChartView === 'usage' ? 'Usage (kWh)' : 'Billed total ($)';
+
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const present = [];
   MONTHS.forEach(function(_lab, i) {
     const m = i + 1;
-    if (electricMonthHas(meter, year, m)) present.push(electricMonthTotal(meter, year, m));
-    if (cmpYear && electricMonthHas(meter, cmpYear, m)) present.push(electricMonthTotal(meter, cmpYear, m));
+    if (electricMonthHas(meter, year, m)) present.push(Math.abs(electricMonthMetric(meter, year, m)));
+    if (cmpYear && electricMonthHas(meter, cmpYear, m)) present.push(Math.abs(electricMonthMetric(meter, cmpYear, m)));
   });
   const max = Math.max.apply(null, present.concat([1]));
   bars.innerHTML = MONTHS.map(function(lab, i) {
     const m = i + 1;
     const hasS = year && electricMonthHas(meter, year, m);
     const hasH = cmpYear && electricMonthHas(meter, cmpYear, m);
-    const v = hasS ? electricMonthTotal(meter, year, m) : null;
-    const h = hasH ? electricMonthTotal(meter, cmpYear, m) : null;
+    const v = hasS ? electricMonthMetric(meter, year, m) : null;
+    const h = hasH ? electricMonthMetric(meter, cmpYear, m) : null;
     const hs = hasS ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 0;
     const hh = hasH ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 0;
     const tipParts = [lab];
-    if (hasS) tipParts.push(year + ' ' + laborMoney(v));
-    if (hasH) tipParts.push(cmpYear + ' ' + laborMoney(h));
+    if (hasS) tipParts.push(year + ' ' + electricFmtMetric(v));
+    if (hasH) tipParts.push(cmpYear + ' ' + electricFmtMetric(h));
     if (!hasS && !hasH) tipParts.push('no statement');
     const allMeters = !meter || meter === 'all';
     const selBar = hasS
@@ -5152,7 +5224,7 @@ function renderElectric() {
     const histBar = hasH
       ? '<div class="water-bar hist" style="height:' + hh + 'px"></div>'
       : '';
-    const amt = hasS ? electricBarAmt(v) : '';
+    const amt = hasS ? electricFmtMetric(v) : '';
     return '<div class="chem-bar-col">' +
       '<div class="chem-bar-amt">' + amt + '</div>' +
       '<div class="water-bar-pair" title="' + chemEsc(tipParts.join(' · ')) + '">' +
