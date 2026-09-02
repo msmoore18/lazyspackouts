@@ -1846,6 +1846,7 @@
     min-height: 0;
   }
   #electric-section .water-bar.sel { background: var(--mid); cursor: pointer; }
+  #electric-section .water-bar.sel.no-click { cursor: default; }
   #electric-section .water-bar.hist { background: #c5d1c6; }
   @media (max-width: 640px) {
     #electric-section .chem-total-value { font-size: 26px; }
@@ -4906,7 +4907,9 @@ function electricYearsInData() {
 }
 function electricMonthRows(name, year, month) {
   return electricData.filter(function(r) {
-    return r.displayName === name && electricYear(r) === year && electricMonth(r) === month;
+    if (electricYear(r) !== year || electricMonth(r) !== month) return false;
+    if (!name || name === 'all') return true;
+    return r.displayName === name;
   });
 }
 function electricMonthHas(name, year, month) {
@@ -4946,7 +4949,7 @@ function initElectricFilters() {
   const years = electricYearsInData();
   const prevMeter = meterSel.value;
   const prevYear = yearSel.value;
-  meterSel.innerHTML = names.map(function(n) {
+  meterSel.innerHTML = '<option value="all">All meters</option>' + names.map(function(n) {
     return '<option value="' + chemEsc(n) + '">' + chemEsc(n) + '</option>';
   }).join('');
   yearSel.innerHTML = years.map(function(y) {
@@ -4957,7 +4960,7 @@ function initElectricFilters() {
     if (names.length) meterSel.value = names[0];
     if (years.length) yearSel.value = String(years[0]);
   } else {
-    if (prevMeter && names.indexOf(prevMeter) >= 0) meterSel.value = prevMeter;
+    if (prevMeter === 'all' || (prevMeter && names.indexOf(prevMeter) >= 0)) meterSel.value = prevMeter;
     else if (names.length) meterSel.value = names[0];
     if (prevYear && years.indexOf(parseInt(prevYear, 10)) >= 0) yearSel.value = prevYear;
     else if (years.length) yearSel.value = String(years[0]);
@@ -4989,6 +4992,7 @@ function initElectricCompare(year) {
 function showElectricBill(year, month) {
   const meterSel = document.getElementById('electric-meter-filter');
   const meter = meterSel ? meterSel.value : '';
+  if (!meter || meter === 'all') return;
   const rows = electricMonthRows(meter, year, month);
   if (!rows.length) return;
   const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -5055,14 +5059,18 @@ function renderElectric() {
   if (legend) legend.textContent = cmpYear ? String(cmpYear) : '';
 
   const yearRows = electricData.filter(function(r) {
-    return r.displayName === meter && electricYear(r) === year;
+    if (electricYear(r) !== year) return false;
+    if (!meter || meter === 'all') return true;
+    return r.displayName === meter;
   });
   const totDol = yearRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
   const totKwh = yearRows.reduce(function(s, r) { return s + (r.totalKwh || 0); }, 0);
   let compareHtml = '';
   if (cmpYear) {
     const cmpRows = electricData.filter(function(r) {
-      return r.displayName === meter && electricYear(r) === cmpYear;
+      if (electricYear(r) !== cmpYear) return false;
+      if (!meter || meter === 'all') return true;
+      return r.displayName === meter;
     });
     const cmpDol = cmpRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
     if (yearRows.length) {
@@ -5080,7 +5088,7 @@ function renderElectric() {
     }
   }
   summary.innerHTML =
-    '<div class="water-metric"><div class="chem-total-label">' + (year || '') + ' billed</div>' +
+    '<div class="water-metric"><div class="chem-total-label">' + (year || '') + (meter === 'all' ? ' all meters' : '') + ' billed</div>' +
     '<div class="chem-total-value">' + laborMoney(totDol) + '</div>' +
     compareHtml + '</div>' +
     '<div class="water-metric"><div class="chem-total-label">Usage</div>' +
@@ -5106,8 +5114,11 @@ function renderElectric() {
     if (hasS) tipParts.push(year + ' ' + laborMoney(v));
     if (hasH) tipParts.push(cmpYear + ' ' + laborMoney(h));
     if (!hasS && !hasH) tipParts.push('no statement');
+    const allMeters = !meter || meter === 'all';
     const selBar = hasS
-      ? '<div class="water-bar sel" style="height:' + hs + 'px" onclick="showElectricBill(' + year + ',' + m + ')"></div>'
+      ? (allMeters
+          ? '<div class="water-bar sel no-click" style="height:' + hs + 'px"></div>'
+          : '<div class="water-bar sel" style="height:' + hs + 'px" onclick="showElectricBill(' + year + ',' + m + ')"></div>')
       : '';
     const histBar = hasH
       ? '<div class="water-bar hist" style="height:' + hh + 'px"></div>'
