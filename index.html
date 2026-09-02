@@ -1815,6 +1815,44 @@
     color: white;
     border-color: var(--dark);
   }
+  #electric-section .elec-year-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    height: 180px;
+  }
+  #electric-section .elec-year-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  #electric-section .elec-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    width: 28px;
+    height: 148px;
+  }
+  #electric-section .elec-seg {
+    width: 100%;
+    min-height: 0;
+  }
+  #electric-section .elec-seg.customer { background: #2c4a2e; }
+  #electric-section .elec-seg.demand { background: #e8823a; }
+  #electric-section .elec-seg.energy { background: #5a8f68; }
+  #electric-section .elec-seg.nbc { background: #6b7d9a; }
+  #electric-section .elec-swatch.customer { background: #2c4a2e; }
+  #electric-section .elec-swatch.demand { background: #e8823a; }
+  #electric-section .elec-swatch.energy { background: #5a8f68; }
+  #electric-section .elec-swatch.nbc { background: #6b7d9a; }
+  #electric-section .elec-swatch.peak { background: #e8823a; }
+  #electric-section .elec-swatch.offpeak { background: var(--mid); }
+  #electric-section .water-bar.peak { background: #e8823a; }
+  #electric-section .water-bar.offpeak { background: var(--mid); }
   #electric-section .water-legend {
     display: flex;
     flex-wrap: wrap;
@@ -2200,6 +2238,31 @@
         <span><span class="water-swatch hist"></span><span id="electric-compare-legend">2025</span></span>
       </div>
       <div id="electric-bars" class="chem-bars"></div>
+    </div>
+    <div class="chem-chart-wrap">
+      <div class="chem-chart-title">Charges by year</div>
+      <div class="water-legend">
+        <span><span class="water-swatch elec-swatch customer"></span>Customer</span>
+        <span><span class="water-swatch elec-swatch demand"></span>Demand</span>
+        <span><span class="water-swatch elec-swatch energy"></span>Energy</span>
+        <span><span class="water-swatch elec-swatch nbc"></span>NBC</span>
+      </div>
+      <div id="electric-mix-bars" class="elec-year-bars"></div>
+    </div>
+    <div class="chem-chart-wrap">
+      <div class="elec-chart-head">
+        <div id="electric-rate-title" class="chem-chart-title">Average rates</div>
+        <div class="chem-view-toggle" role="group" aria-label="Electric rate metric">
+          <button type="button" class="chem-view-btn active" id="electric-rate-energy" onclick="setElectricRateView('energy')">Energy ¢/kWh</button>
+          <button type="button" class="chem-view-btn" id="electric-rate-demand" onclick="setElectricRateView('demand')">Demand $/kW</button>
+          <button type="button" class="chem-view-btn" id="electric-rate-customer" onclick="setElectricRateView('customer')">Customer $/day</button>
+        </div>
+      </div>
+      <div class="water-legend" id="electric-rate-legend">
+        <span><span class="water-swatch elec-swatch peak"></span>Peak</span>
+        <span><span class="water-swatch elec-swatch offpeak"></span>Off-peak</span>
+      </div>
+      <div id="electric-rate-bars" class="elec-year-bars"></div>
     </div>
   </div>
   <div id="maps-section" class="section">
@@ -3685,6 +3748,11 @@ function parseWorkbook(wb) {
           meter: String(r['Meter #'] || '').trim(),
           rateSchedule: String(r['Rate Schedule'] || '').trim(),
           customerCharge: electricNum(r['Customer Charge ($)']),
+          customerRate: electricNum(r['Customer Charge Rate ($/day)']),
+          demandRate: electricNum(r['Max Demand Rate ($/kW)']),
+          peakRate: electricNum(r['Peak Rate ($/kWh)']),
+          offPeakRate: electricNum(r['Off Peak Rate ($/kWh)']),
+          netUsageCharges: electricNum(r['Net Usage Charges ($)']),
           maxDemandKw: electricNum(r['Max Demand (kW)']),
           demandCharge: electricNum(r['Demand Charge Total ($)']),
           peakKwh: electricNum(r['Peak Use (kWh)']),
@@ -5017,6 +5085,16 @@ function electricFmtKw(n) {
 let electricFiltersReady = false;
 let electricCompareReady = false;
 let electricChartView = 'billed';
+let electricRateView = 'energy';
+
+function setElectricRateView(view) {
+  electricRateView = (view === 'demand' || view === 'customer') ? view : 'energy';
+  ['energy','demand','customer'].forEach(function(v) {
+    const btn = document.getElementById('electric-rate-' + v);
+    if (btn) btn.classList.toggle('active', electricRateView === v);
+  });
+  renderElectric();
+}
 
 function setElectricChartView(view) {
   electricChartView = view === 'usage' ? 'usage' : 'billed';
@@ -5232,6 +5310,126 @@ function renderElectric() {
       '</div>' +
       '<div class="chem-bar-label">' + lab + '</div></div>';
   }).join('');
+
+  renderElectricYearly(meter);
+}
+
+function electricRowsScoped(meter, year) {
+  return electricData.filter(function(r) {
+    if (year && electricYear(r) !== year) return false;
+    if (!meter || meter === 'all') return true;
+    return r.displayName === meter;
+  });
+}
+function electricAvg(vals) {
+  const nums = (vals || []).filter(function(n) { return n != null && isFinite(n); });
+  if (!nums.length) return null;
+  return nums.reduce(function(s, n) { return s + n; }, 0) / nums.length;
+}
+function electricYearMix(meter, year) {
+  const rows = electricRowsScoped(meter, year);
+  const mix = { customer: 0, demand: 0, energy: 0, nbc: 0, any: false };
+  rows.forEach(function(r) {
+    mix.any = true;
+    mix.customer += r.customerCharge || 0;
+    mix.demand += r.demandCharge || 0;
+    mix.energy += r.netUsageCharges || 0;
+    mix.nbc += r.nbc || 0;
+  });
+  return mix;
+}
+
+function renderElectricYearly(meter) {
+  const years = electricYearsInData().slice().sort(function(a, b) { return a - b; });
+  const mixEl = document.getElementById('electric-mix-bars');
+  const rateEl = document.getElementById('electric-rate-bars');
+  if (mixEl) {
+    const mixes = years.map(function(y) { return electricYearMix(meter, y); });
+    const max = Math.max.apply(null, mixes.map(function(m) {
+      return Math.max(0, m.customer) + Math.max(0, m.demand) + Math.max(0, m.energy) + Math.max(0, m.nbc);
+    }).concat([1]));
+    mixEl.innerHTML = years.map(function(y, i) {
+      const m = mixes[i];
+      function seg(cls, n) {
+        if (!n || n <= 0) return '';
+        const h = Math.max(2, Math.round(148 * n / max));
+        return '<div class="elec-seg ' + cls + '" style="height:' + h + 'px" title="' + cls + ' ' + laborMoney(n) + '"></div>';
+      }
+      const tot = m.customer + m.demand + m.energy + m.nbc;
+      const ytd = electricLastMonth(meter, y) < 12;
+      return '<div class="elec-year-col">' +
+        '<div class="chem-bar-amt">' + (m.any ? electricBarAmt(tot) : '') + '</div>' +
+        '<div class="elec-stack">' +
+        seg('customer', m.customer) + seg('demand', m.demand) +
+        seg('energy', m.energy) + seg('nbc', m.nbc) +
+        '</div>' +
+        '<div class="chem-bar-label">' + y + (ytd ? ' YTD' : '') + '</div></div>';
+    }).join('');
+  }
+  if (rateEl) {
+    const legend = document.getElementById('electric-rate-legend');
+    const title = document.getElementById('electric-rate-title');
+    const dual = electricRateView === 'energy';
+    if (legend) legend.style.display = dual ? '' : 'none';
+    if (title) {
+      title.textContent = electricRateView === 'demand' ? 'Average demand rate ($/kW)'
+        : electricRateView === 'customer' ? 'Average customer charge ($/day)'
+        : 'Average energy rates (¢/kWh)';
+    }
+    const series = years.map(function(y) {
+      const rows = electricRowsScoped(meter, y);
+      if (electricRateView === 'demand') {
+        return { y: y, a: electricAvg(rows.map(function(r) { return r.demandRate; })), b: null };
+      }
+      if (electricRateView === 'customer') {
+        return { y: y, a: electricAvg(rows.map(function(r) { return r.customerRate; })), b: null };
+      }
+      return {
+        y: y,
+        a: electricAvg(rows.map(function(r) { return r.peakRate; })),
+        b: electricAvg(rows.map(function(r) { return r.offPeakRate; }))
+      };
+    });
+    function showRate(n) {
+      if (n == null) return '';
+      if (electricRateView === 'energy') return (n * 100).toFixed(1) + '¢';
+      if (electricRateView === 'demand') return '$' + n.toFixed(2);
+      return '$' + n.toFixed(2);
+    }
+    const plotVals = [];
+    series.forEach(function(s) {
+      if (dual) {
+        if (s.a != null) plotVals.push(s.a * 100);
+        if (s.b != null) plotVals.push(s.b * 100);
+      } else if (s.a != null) plotVals.push(s.a);
+    });
+    const max = Math.max.apply(null, plotVals.concat([1]));
+    rateEl.innerHTML = series.map(function(s) {
+      const ytd = electricLastMonth(meter, s.y) < 12;
+      if (dual) {
+        const pa = s.a != null ? s.a * 100 : null;
+        const pb = s.b != null ? s.b * 100 : null;
+        const ha = pa != null ? Math.max(4, Math.round(148 * pa / max)) : 0;
+        const hb = pb != null ? Math.max(4, Math.round(148 * pb / max)) : 0;
+        const amt = pa != null ? (pa.toFixed(1) + '¢') : (pb != null ? (pb.toFixed(1) + '¢') : '');
+        return '<div class="elec-year-col">' +
+          '<div class="chem-bar-amt">' + amt + '</div>' +
+          '<div class="water-bar-pair">' +
+          (pa != null ? '<div class="water-bar peak" style="height:' + ha + 'px" title="Peak ' + showRate(s.a) + '"></div>' : '') +
+          (pb != null ? '<div class="water-bar offpeak" style="height:' + hb + 'px" title="Off-peak ' + showRate(s.b) + '"></div>' : '') +
+          '</div>' +
+          '<div class="chem-bar-label">' + s.y + (ytd ? ' YTD' : '') + '</div></div>';
+      }
+      const v = s.a;
+      const h = v != null ? Math.max(4, Math.round(148 * v / max)) : 0;
+      return '<div class="elec-year-col">' +
+        '<div class="chem-bar-amt">' + showRate(v) + '</div>' +
+        '<div class="water-bar-pair">' +
+        (v != null ? '<div class="water-bar sel no-click" style="height:' + h + 'px"></div>' : '') +
+        '</div>' +
+        '<div class="chem-bar-label">' + s.y + (ytd ? ' YTD' : '') + '</div></div>';
+    }).join('');
+  }
 }
 
 
