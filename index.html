@@ -4896,6 +4896,14 @@ function electricMetersInData() {
   names.sort(electricMeterSort);
   return names;
 }
+function electricMeterHasSolar(name) {
+  return electricData.some(function(r) {
+    if (r.displayName !== name) return false;
+    if (/^yes$/i.test(r.nem || '')) return true;
+    if (r.nemProgram) return true;
+    return false;
+  });
+}
 function electricYearsInData() {
   const years = [];
   electricData.forEach(function(r) {
@@ -4964,7 +4972,8 @@ function initElectricFilters() {
   const prevMeter = meterSel.value;
   const prevYear = yearSel.value;
   meterSel.innerHTML = '<option value="all">All meters</option>' + names.map(function(n) {
-    return '<option value="' + chemEsc(n) + '">' + chemEsc(n) + '</option>';
+    const label = electricMeterHasSolar(n) ? (n + ' (solar)') : n;
+    return '<option value="' + chemEsc(n) + '">' + chemEsc(label) + '</option>';
   }).join('');
   yearSel.innerHTML = years.map(function(y) {
     return '<option value="' + y + '">' + y + '</option>';
