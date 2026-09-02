@@ -1731,6 +1731,129 @@
     #water-section .water-bar { width: 10px; }
   }
 
+  /* ── ELECTRIC (PG&E Ag) ── */
+  #electric-section .chem-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 28px;
+    margin-bottom: 22px;
+    padding: 18px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  #electric-section .chem-total-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+  #electric-section .chem-total-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--dark);
+    letter-spacing: 0.01em;
+  }
+  #electric-section .chem-compare {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+  #electric-section .chem-compare.up { color: #c62828; }
+  #electric-section .chem-compare.down { color: #2e7d32; }
+  #electric-section .water-metric { min-width: 140px; }
+  #electric-section .chem-chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px 14px;
+    margin-bottom: 22px;
+  }
+  #electric-section .chem-chart-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+  #electric-section .water-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  #electric-section .water-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  #electric-section .water-swatch.sel { background: var(--mid); }
+  #electric-section .water-swatch.hist {
+    background: #c5d1c6;
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+  #electric-section .chem-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 180px;
+  }
+  #electric-section .chem-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  #electric-section .chem-bar-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-top: 6px;
+  }
+  #electric-section .chem-bar-amt {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  #electric-section .water-bar-pair {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    min-height: 2px;
+  }
+  #electric-section .water-bar {
+    width: 14px;
+    max-width: 22px;
+    border-radius: 3px 3px 0 0;
+    min-height: 0;
+  }
+  #electric-section .water-bar.sel { background: var(--mid); cursor: pointer; }
+  #electric-section .water-bar.hist { background: #c5d1c6; }
+  @media (max-width: 640px) {
+    #electric-section .chem-total-value { font-size: 26px; }
+    #electric-section .chem-bars { height: 140px; gap: 3px; }
+    #electric-section .chem-bar-amt { font-size: 8px; }
+    #electric-section .water-bar { width: 10px; }
+  }
+
 </style>
 </head>
 <body>
@@ -1745,6 +1868,7 @@
     <div class="nav-tab" data-section="financials" onclick="showSection('financials', this)">Financials</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
     <div class="nav-tab" data-section="water" onclick="showSection('water',this)">Water</div>
+    <div class="nav-tab" data-section="electric" onclick="showSection('electric',this)">Electric Usage</div>
     <div class="nav-tab" data-section="maps" onclick="showSection('maps', this)">Maps</div>
   </div>
   <button class="menu-btn" onclick="toggleMobile()">☰</button>
@@ -1757,6 +1881,7 @@
   <div class="mobile-menu-item" data-section="financials" onclick="showSection('financials',this);toggleMobile()">Financials</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
   <div class="mobile-menu-item" onclick="showSection('water',this);toggleMobile()">Water</div>
+  <div class="mobile-menu-item" onclick="showSection('electric',this);toggleMobile()">Electric Usage</div>
   <div class="mobile-menu-item" onclick="showSection('maps',this);toggleMobile()">Maps</div>
 </div>
 
@@ -2015,6 +2140,27 @@
       <div id="water-bars" class="chem-bars"></div>
     </div>
   </div>
+  <div id="electric-section" class="section">
+    <div class="page-title">Electric Usage</div>
+    <div class="filter-bar">
+      <span class="filter-label">Meter</span>
+      <select id="electric-meter-filter" onchange="renderElectric()"></select>
+      <span class="filter-label" style="margin-left:8px">Year</span>
+      <select id="electric-year-filter" onchange="onElectricYearChange()"></select>
+      <span class="filter-label" style="margin-left:8px">Compare</span>
+      <select id="electric-compare-filter" onchange="renderElectric()"></select>
+      <span class="filter-hint">Fiscal/calendar bills, not crop year.</span>
+    </div>
+    <div id="electric-summary" class="chem-summary"></div>
+    <div class="chem-chart-wrap">
+      <div id="electric-chart-title" class="chem-chart-title">SAID billed total ($)</div>
+      <div class="water-legend">
+        <span><span class="water-swatch sel"></span>Selected</span>
+        <span><span class="water-swatch hist"></span><span id="electric-compare-legend">2025</span></span>
+      </div>
+      <div id="electric-bars" class="chem-bars"></div>
+    </div>
+  </div>
   <div id="maps-section" class="section">
     <div id="farm-map-wrap">
       <div class="farm-map-toolbar">
@@ -2057,6 +2203,7 @@ let chemView = 'purchases';
 let spraySelectedCat = null;
 let waterData = [];
 let waterSupply = [];
+let electricData = [];
 const SPRAY_CATS = [
   'Fertilizer',
   'Insecticide',
@@ -2222,7 +2369,7 @@ function showSection(name, el) {
 
   const rangeBar = document.getElementById('global-range-bar');
   if (rangeBar) {
-    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest') ? 'none' : '';
+    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric') ? 'none' : '';
   }
   const rangeLabel = document.getElementById('range-bar-label');
   const rangeHint = document.getElementById('range-bar-hint');
@@ -2245,6 +2392,7 @@ function showSection(name, el) {
   if (name === 'chemicals') renderChemicalsPage();
   if (name === 'water') renderWater();
   if (name === 'financials') renderFinancials();
+  if (name === 'electric') renderElectric();
   if (name === 'maps') {
     initFarmMap();
     setTimeout(function() {
@@ -3453,6 +3601,68 @@ function parseWorkbook(wb) {
       });
   }
 
+
+  // ── Electric (PG&E Ag) ──
+  electricData = [];
+  const ews = wb.Sheets['Electric'];
+  if (ews) {
+    const eRows = XLSX.utils.sheet_to_json(ews, { raw: true, defval: null });
+    function electricDstr(val) {
+      if (!val) return '';
+      if (val instanceof Date) return excelDateToStr(val);
+      if (typeof val === 'number') return excelDateToStr(val);
+      if (typeof val === 'string' && val.includes('/')) {
+        const parts = val.split('/');
+        if (parts.length === 3) {
+          const [mo, dy, yr] = parts;
+          return yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+        }
+      }
+      return String(val).slice(0, 10);
+    }
+    function electricNum(v) {
+      if (v == null || v === '') return null;
+      if (typeof v === 'number') return isFinite(v) ? v : null;
+      const n = parseFloat(String(v).replace(/,/g, ''));
+      return isFinite(n) ? n : null;
+    }
+    electricData = eRows
+      .filter(r => r['Service Agreement ID'] != null && r['Service Agreement ID'] !== '')
+      .map(r => {
+        return {
+          billType: String(r['Bill Type'] || '').trim(),
+          account: String(r['Account Number'] || '').trim(),
+          statementDate: electricDstr(r['Statement Date']),
+          periodStart: electricDstr(r['Period Start']),
+          periodEnd: electricDstr(r['Period End']),
+          billingDays: electricNum(r['Billing Days']),
+          said: String(r['Service Agreement ID'] || '').trim(),
+          nem: String(r['NEM'] || '').trim(),
+          nemProgram: String(r['NEM Program'] || '').trim(),
+          serviceFor: String(r['Service For'] || '').trim(),
+          displayName: String(r['Display Name'] || '').trim(),
+          meter: String(r['Meter #'] || '').trim(),
+          rateSchedule: String(r['Rate Schedule'] || '').trim(),
+          customerCharge: electricNum(r['Customer Charge ($)']),
+          maxDemandKw: electricNum(r['Max Demand (kW)']),
+          demandCharge: electricNum(r['Demand Charge Total ($)']),
+          peakKwh: electricNum(r['Peak Use (kWh)']),
+          peakCharges: electricNum(r['Peak Charges ($)']),
+          offPeakKwh: electricNum(r['Off Peak Use (kWh)']),
+          offPeakCharges: electricNum(r['Off Peak Charges ($)']),
+          imports: electricNum(r['Imports (kWh)']),
+          exports: electricNum(r['Exports (kWh)']),
+          netKwh: electricNum(r['Net Usage (kWh)']),
+          totalKwh: electricNum(r['Total Usage (kWh)']),
+          nbc: electricNum(r['NBC ($)']),
+          nbcAdj: electricNum(r['NBC Adjustment ($)']),
+          nemBilled: electricNum(r['NEM Billed Charges ($)']),
+          billedTotal: electricNum(r['SAID Billed Total ($)']),
+          sourceFile: String(r['Source File'] || '').trim(),
+        };
+      });
+  }
+
   // Boot the dashboard
   initFilters();
   document.getElementById('col-harvest').classList.add('col-hidden');
@@ -3482,6 +3692,7 @@ function parseWorkbook(wb) {
     currentMonth = now.getMonth();
   }
   updateCalendar();
+  renderElectric();
 }
 
 
@@ -4650,6 +4861,262 @@ function renderWater() {
       '<div class="water-bar-pair" title="' + chemEsc(tip) + '">' +
       '<div class="water-bar sel' + zeroS + '" style="height:' + hs + 'px"></div>' +
       '<div class="water-bar hist' + zeroH + '" style="height:' + hh + 'px"></div>' +
+      '</div>' +
+      '<div class="chem-bar-label">' + lab + '</div></div>';
+  }).join('');
+}
+
+function electricYear(r) {
+  return parseInt(String(r.statementDate || '').slice(0, 4), 10) || 0;
+}
+function electricMonth(r) {
+  return parseInt(String(r.statementDate || '').slice(5, 7), 10) || 0;
+}
+function electricMeterSort(a, b) {
+  function key(name) {
+    const s = String(name || '');
+    const well = s.match(/^Well\s+(\d+)$/i);
+    if (well) return [0, parseInt(well[1], 10), s];
+    const wm = s.match(/^WM\s+(\d+)$/i);
+    if (wm) return [1, parseInt(wm[1], 10), s];
+    if (/^booster\s*pump$/i.test(s)) return [2, 0, s];
+    return [3, 0, s];
+  }
+  const ka = key(a), kb = key(b);
+  if (ka[0] !== kb[0]) return ka[0] - kb[0];
+  if (ka[1] !== kb[1]) return ka[1] - kb[1];
+  return ka[2].localeCompare(kb[2]);
+}
+function electricMetersInData() {
+  const names = [];
+  electricData.forEach(function(r) {
+    if (r.displayName && names.indexOf(r.displayName) < 0) names.push(r.displayName);
+  });
+  names.sort(electricMeterSort);
+  return names;
+}
+function electricYearsInData() {
+  const years = [];
+  electricData.forEach(function(r) {
+    const y = electricYear(r);
+    if (y && years.indexOf(y) < 0) years.push(y);
+  });
+  years.sort(function(a, b) { return b - a; });
+  return years;
+}
+function electricMonthRows(name, year, month) {
+  return electricData.filter(function(r) {
+    return r.displayName === name && electricYear(r) === year && electricMonth(r) === month;
+  });
+}
+function electricMonthHas(name, year, month) {
+  return electricMonthRows(name, year, month).length > 0;
+}
+function electricMonthTotal(name, year, month) {
+  return electricMonthRows(name, year, month).reduce(function(s, r) {
+    return s + (r.billedTotal || 0);
+  }, 0);
+}
+function electricBarAmt(n) {
+  if (n == null) return '';
+  return (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+}
+function electricFmtKwh(n) {
+  if (n == null) return '—';
+  return (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' kWh';
+}
+function electricFmtKw(n) {
+  if (n == null) return '—';
+  return (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' kW';
+}
+
+let electricFiltersReady = false;
+let electricCompareReady = false;
+
+function onElectricYearChange() {
+  electricCompareReady = false;
+  renderElectric();
+}
+
+function initElectricFilters() {
+  const meterSel = document.getElementById('electric-meter-filter');
+  const yearSel = document.getElementById('electric-year-filter');
+  if (!meterSel || !yearSel) return;
+  const names = electricMetersInData();
+  const years = electricYearsInData();
+  const prevMeter = meterSel.value;
+  const prevYear = yearSel.value;
+  meterSel.innerHTML = names.map(function(n) {
+    return '<option value="' + chemEsc(n) + '">' + chemEsc(n) + '</option>';
+  }).join('');
+  yearSel.innerHTML = years.map(function(y) {
+    return '<option value="' + y + '">' + y + '</option>';
+  }).join('');
+  if (!electricFiltersReady) {
+    electricFiltersReady = true;
+    if (names.length) meterSel.value = names[0];
+    if (years.length) yearSel.value = String(years[0]);
+  } else {
+    if (prevMeter && names.indexOf(prevMeter) >= 0) meterSel.value = prevMeter;
+    else if (names.length) meterSel.value = names[0];
+    if (prevYear && years.indexOf(parseInt(prevYear, 10)) >= 0) yearSel.value = prevYear;
+    else if (years.length) yearSel.value = String(years[0]);
+  }
+}
+
+function initElectricCompare(year) {
+  const sel = document.getElementById('electric-compare-filter');
+  if (!sel) return;
+  const others = electricYearsInData().filter(function(y) { return y !== year; });
+  const prev = sel.value;
+  sel.innerHTML = others.map(function(y) {
+    return '<option value="' + y + '">' + y + '</option>';
+  }).join('');
+  function pickDefault() {
+    if (others.indexOf(year - 1) >= 0) return String(year - 1);
+    return others.length ? String(others[0]) : '';
+  }
+  if (!electricCompareReady) {
+    electricCompareReady = true;
+    sel.value = pickDefault();
+  } else if (prev && [...sel.options].some(function(o) { return o.value === prev; })) {
+    sel.value = prev;
+  } else {
+    sel.value = pickDefault();
+  }
+}
+
+function showElectricBill(year, month) {
+  const meterSel = document.getElementById('electric-meter-filter');
+  const meter = meterSel ? meterSel.value : '';
+  const rows = electricMonthRows(meter, year, month);
+  if (!rows.length) return;
+  const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let html = '<div class="modal-title">' + chemEsc(meter) + ' · ' + MONTHS[month] + ' ' + year + '</div>';
+  function money(v) { return v == null ? '—' : laborMoney(v); }
+  function detailTable(r) {
+    return '<table class="modal-table"><tbody>' +
+      '<tr><td>SAID</td><td>' + chemEsc(r.said) + '</td></tr>' +
+      '<tr><td>Meter #</td><td>' + chemEsc(r.meter) + '</td></tr>' +
+      '<tr><td>Statement date</td><td>' + laborFmtDate(r.statementDate) + '</td></tr>' +
+      '<tr><td>Period start</td><td>' + laborFmtDate(r.periodStart) + '</td></tr>' +
+      '<tr><td>Period end</td><td>' + laborFmtDate(r.periodEnd) + '</td></tr>' +
+      '<tr><td>Rate schedule</td><td>' + chemEsc(r.rateSchedule || '—') + '</td></tr>' +
+      '<tr><td>Customer charge</td><td>' + money(r.customerCharge) + '</td></tr>' +
+      '<tr><td>Max demand</td><td>' + electricFmtKw(r.maxDemandKw) + '</td></tr>' +
+      '<tr><td>Demand charge</td><td>' + money(r.demandCharge) + '</td></tr>' +
+      '<tr><td>Peak use</td><td>' + electricFmtKwh(r.peakKwh) + '</td></tr>' +
+      '<tr><td>Peak charges</td><td>' + money(r.peakCharges) + '</td></tr>' +
+      '<tr><td>Off-peak use</td><td>' + electricFmtKwh(r.offPeakKwh) + '</td></tr>' +
+      '<tr><td>Off-peak charges</td><td>' + money(r.offPeakCharges) + '</td></tr>' +
+      '<tr><td>Imports</td><td>' + electricFmtKwh(r.imports) + '</td></tr>' +
+      '<tr><td>Exports</td><td>' + electricFmtKwh(r.exports) + '</td></tr>' +
+      '<tr><td>Net kWh</td><td>' + electricFmtKwh(r.netKwh) + '</td></tr>' +
+      '<tr><td>NBC</td><td>' + money(r.nbc) + '</td></tr>' +
+      '<tr><td>NEM billed</td><td>' + money(r.nemBilled) + '</td></tr>' +
+      '<tr><td>SAID billed total</td><td>' + money(r.billedTotal) + '</td></tr>' +
+      '</tbody></table>';
+  }
+  if (rows.length === 1) {
+    html += detailTable(rows[0]);
+  } else {
+    const sum = rows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
+    html += '<div style="font-size:13px;color:var(--text-light);margin-bottom:10px">' +
+      rows.length + ' service agreements · billed total ' + laborMoney(sum) + '</div>';
+    html += '<table class="modal-table"><thead><tr><th>SAID</th><th>Meter #</th><th>Period</th><th>Billed</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      html += '<tr><td>' + chemEsc(r.said) + '</td><td>' + chemEsc(r.meter) + '</td><td>' +
+        laborFmtDate(r.periodStart) + ' – ' + laborFmtDate(r.periodEnd) + '</td><td>' +
+        laborMoney(r.billedTotal || 0) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    rows.forEach(function(r) {
+      html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">SAID ' + chemEsc(r.said) + '</div>';
+      html += detailTable(r);
+    });
+  }
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function renderElectric() {
+  const meterSel = document.getElementById('electric-meter-filter');
+  const yearSel = document.getElementById('electric-year-filter');
+  const summary = document.getElementById('electric-summary');
+  const bars = document.getElementById('electric-bars');
+  if (!meterSel || !yearSel || !summary || !bars) return;
+  initElectricFilters();
+  const meter = meterSel.value;
+  const year = parseInt(yearSel.value, 10) || 0;
+  initElectricCompare(year);
+  const cmpSel = document.getElementById('electric-compare-filter');
+  const cmpYear = cmpSel && cmpSel.value ? parseInt(cmpSel.value, 10) : 0;
+  const legend = document.getElementById('electric-compare-legend');
+  if (legend) legend.textContent = cmpYear ? String(cmpYear) : '';
+
+  const yearRows = electricData.filter(function(r) {
+    return r.displayName === meter && electricYear(r) === year;
+  });
+  const totDol = yearRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
+  const totKwh = yearRows.reduce(function(s, r) { return s + (r.totalKwh || 0); }, 0);
+  let compareHtml = '';
+  if (cmpYear) {
+    const cmpRows = electricData.filter(function(r) {
+      return r.displayName === meter && electricYear(r) === cmpYear;
+    });
+    const cmpDol = cmpRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
+    if (yearRows.length) {
+      const diff = totDol - cmpDol;
+      const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+      const sign = diff > 0 ? '+' : '';
+      let pctBit = '';
+      if (cmpDol) {
+        const pct = (diff / cmpDol) * 100;
+        const psign = pct > 0 ? '+' : '';
+        pctBit = ' (' + psign + pct.toFixed(0) + '%)';
+      }
+      compareHtml = '<div class="chem-compare ' + dir + '">' +
+        sign + laborMoney(diff) + ' vs ' + cmpYear + pctBit + '</div>';
+    }
+  }
+  summary.innerHTML =
+    '<div class="water-metric"><div class="chem-total-label">' + (year || '') + ' billed</div>' +
+    '<div class="chem-total-value">' + laborMoney(totDol) + '</div>' +
+    compareHtml + '</div>' +
+    '<div class="water-metric"><div class="chem-total-label">Usage</div>' +
+    '<div class="chem-total-value">' + electricFmtKwh(totKwh) + '</div></div>';
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const present = [];
+  MONTHS.forEach(function(_lab, i) {
+    const m = i + 1;
+    if (electricMonthHas(meter, year, m)) present.push(electricMonthTotal(meter, year, m));
+    if (cmpYear && electricMonthHas(meter, cmpYear, m)) present.push(electricMonthTotal(meter, cmpYear, m));
+  });
+  const max = Math.max.apply(null, present.concat([1]));
+  bars.innerHTML = MONTHS.map(function(lab, i) {
+    const m = i + 1;
+    const hasS = year && electricMonthHas(meter, year, m);
+    const hasH = cmpYear && electricMonthHas(meter, cmpYear, m);
+    const v = hasS ? electricMonthTotal(meter, year, m) : null;
+    const h = hasH ? electricMonthTotal(meter, cmpYear, m) : null;
+    const hs = hasS ? Math.max(4, Math.round(148 * Math.abs(v) / max)) : 0;
+    const hh = hasH ? Math.max(4, Math.round(148 * Math.abs(h) / max)) : 0;
+    const tipParts = [lab];
+    if (hasS) tipParts.push(year + ' ' + laborMoney(v));
+    if (hasH) tipParts.push(cmpYear + ' ' + laborMoney(h));
+    if (!hasS && !hasH) tipParts.push('no statement');
+    const selBar = hasS
+      ? '<div class="water-bar sel" style="height:' + hs + 'px" onclick="showElectricBill(' + year + ',' + m + ')"></div>'
+      : '';
+    const histBar = hasH
+      ? '<div class="water-bar hist" style="height:' + hh + 'px"></div>'
+      : '';
+    const amt = hasS ? electricBarAmt(v) : '';
+    return '<div class="chem-bar-col">' +
+      '<div class="chem-bar-amt">' + amt + '</div>' +
+      '<div class="water-bar-pair" title="' + chemEsc(tipParts.join(' · ')) + '">' +
+      selBar + histBar +
       '</div>' +
       '<div class="chem-bar-label">' + lab + '</div></div>';
   }).join('');
