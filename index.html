@@ -4920,6 +4920,20 @@ function electricMonthTotal(name, year, month) {
     return s + (r.billedTotal || 0);
   }, 0);
 }
+function electricLastMonth(name, year) {
+  let last = 0;
+  for (let m = 1; m <= 12; m++) {
+    if (electricMonthHas(name, year, m)) last = m;
+  }
+  return last;
+}
+function electricThruLabel(lastM) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (!lastM) return '';
+  if (lastM === 12) return 'Jan–Dec';
+  if (lastM === 1) return 'Jan';
+  return 'Jan–' + MONTHS[lastM - 1];
+}
 function electricBarAmt(n) {
   if (n == null) return '';
   return (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
@@ -5058,19 +5072,23 @@ function renderElectric() {
   const legend = document.getElementById('electric-compare-legend');
   if (legend) legend.textContent = cmpYear ? String(cmpYear) : '';
 
-  const yearRows = electricData.filter(function(r) {
-    if (electricYear(r) !== year) return false;
+  const lastM = electricLastMonth(meter, year);
+  const ytd = lastM > 0 && lastM < 12;
+  function inScope(r) {
     if (!meter || meter === 'all') return true;
     return r.displayName === meter;
+  }
+  const yearRows = electricData.filter(function(r) {
+    return electricYear(r) === year && inScope(r);
   });
   const totDol = yearRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
   const totKwh = yearRows.reduce(function(s, r) { return s + (r.totalKwh || 0); }, 0);
   let compareHtml = '';
   if (cmpYear) {
     const cmpRows = electricData.filter(function(r) {
-      if (electricYear(r) !== cmpYear) return false;
-      if (!meter || meter === 'all') return true;
-      return r.displayName === meter;
+      if (electricYear(r) !== cmpYear || !inScope(r)) return false;
+      if (ytd && electricMonth(r) > lastM) return false;
+      return true;
     });
     const cmpDol = cmpRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
     if (yearRows.length) {
@@ -5083,15 +5101,17 @@ function renderElectric() {
         const psign = pct > 0 ? '+' : '';
         pctBit = ' (' + psign + pct.toFixed(0) + '%)';
       }
+      const vsLabel = ytd ? (cmpYear + ' ' + electricThruLabel(lastM)) : String(cmpYear);
       compareHtml = '<div class="chem-compare ' + dir + '">' +
-        sign + laborMoney(diff) + ' vs ' + cmpYear + pctBit + '</div>';
+        sign + laborMoney(diff) + ' vs ' + vsLabel + pctBit + '</div>';
     }
   }
+  const billedLabel = (year || '') + (ytd ? ' YTD' : '') + (meter === 'all' ? ' all meters' : '') + ' billed';
   summary.innerHTML =
-    '<div class="water-metric"><div class="chem-total-label">' + (year || '') + (meter === 'all' ? ' all meters' : '') + ' billed</div>' +
+    '<div class="water-metric"><div class="chem-total-label">' + billedLabel + '</div>' +
     '<div class="chem-total-value">' + laborMoney(totDol) + '</div>' +
     compareHtml + '</div>' +
-    '<div class="water-metric"><div class="chem-total-label">Usage</div>' +
+    '<div class="water-metric"><div class="chem-total-label">Usage' + (ytd ? ' YTD' : '') + '</div>' +
     '<div class="chem-total-value">' + electricFmtKwh(totKwh) + '</div></div>';
 
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
