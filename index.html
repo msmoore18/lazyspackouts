@@ -5249,6 +5249,7 @@ function renderElectric() {
   const totDol = yearRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
   const totKwh = yearRows.reduce(function(s, r) { return s + electricUsageOf(r); }, 0);
   let compareHtml = '';
+  let usageCompareHtml = '';
   if (cmpYear) {
     const cmpRows = electricData.filter(function(r) {
       if (electricYear(r) !== cmpYear || !inScope(r)) return false;
@@ -5256,19 +5257,23 @@ function renderElectric() {
       return true;
     });
     const cmpDol = cmpRows.reduce(function(s, r) { return s + (r.billedTotal || 0); }, 0);
+    const cmpKwh = cmpRows.reduce(function(s, r) { return s + electricUsageOf(r); }, 0);
     if (yearRows.length) {
-      const diff = totDol - cmpDol;
-      const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
-      const sign = diff > 0 ? '+' : '';
-      let pctBit = '';
-      if (cmpDol) {
-        const pct = (diff / cmpDol) * 100;
-        const psign = pct > 0 ? '+' : '';
-        pctBit = ' (' + psign + pct.toFixed(0) + '%)';
-      }
       const vsLabel = ytd ? (cmpYear + ' ' + electricThruLabel(lastM)) : String(cmpYear);
-      compareHtml = '<div class="chem-compare ' + dir + '">' +
-        sign + laborMoney(diff) + ' vs ' + vsLabel + pctBit + '</div>';
+      function compareLine(diff, fmt, base) {
+        const dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+        const sign = diff > 0 ? '+' : '';
+        let pctBit = '';
+        if (base) {
+          const pct = (diff / base) * 100;
+          const psign = pct > 0 ? '+' : '';
+          pctBit = ' (' + psign + pct.toFixed(0) + '%)';
+        }
+        return '<div class="chem-compare ' + dir + '">' +
+          sign + fmt(diff) + ' vs ' + vsLabel + pctBit + '</div>';
+      }
+      compareHtml = compareLine(totDol - cmpDol, laborMoney, cmpDol);
+      usageCompareHtml = compareLine(totKwh - cmpKwh, electricFmtKwh, cmpKwh);
     }
   }
   const billedLabel = (year || '') + (ytd ? ' YTD' : '') + (meter === 'all' ? ' all meters' : '') + ' billed';
@@ -5277,7 +5282,8 @@ function renderElectric() {
     '<div class="chem-total-value">' + laborMoney(totDol) + '</div>' +
     compareHtml + '</div>' +
     '<div class="water-metric"><div class="chem-total-label">Usage' + (ytd ? ' YTD' : '') + '</div>' +
-    '<div class="chem-total-value">' + electricFmtKwh(totKwh) + '</div></div>';
+    '<div class="chem-total-value">' + electricFmtKwh(totKwh) + '</div>' +
+    usageCompareHtml + '</div>';
 
   const title = document.getElementById('electric-chart-title');
   if (title) title.textContent = electricChartView === 'usage' ? 'Usage (kWh)' : 'Billed total ($)';
@@ -5395,7 +5401,7 @@ function electricYearMix(meter, year) {
     const nbc = r.nbc || 0;
     const billed = r.billedTotal || 0;
     let energy = r.netUsageCharges || 0;
-    if (energy < 0 || energy > 5000 || (billed && energy > billed * 2)) {
+    if (!energy || energy < 0 || energy > 5000 || (billed && energy > billed * 2)) {
       energy = Math.max(0, billed - customer - demand - nbc);
     }
     mix.customer += customer;
