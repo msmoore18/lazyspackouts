@@ -5390,10 +5390,18 @@ function electricYearMix(meter, year) {
   const mix = { customer: 0, demand: 0, energy: 0, nbc: 0, any: false };
   rows.forEach(function(r) {
     mix.any = true;
-    mix.customer += r.customerCharge || 0;
-    mix.demand += r.demandCharge || 0;
-    mix.energy += r.netUsageCharges || 0;
-    mix.nbc += r.nbc || 0;
+    const customer = r.customerCharge || 0;
+    const demand = r.demandCharge || 0;
+    const nbc = r.nbc || 0;
+    const billed = r.billedTotal || 0;
+    let energy = r.netUsageCharges || 0;
+    if (energy < 0 || energy > 5000 || (billed && energy > billed * 2)) {
+      energy = Math.max(0, billed - customer - demand - nbc);
+    }
+    mix.customer += customer;
+    mix.demand += demand;
+    mix.energy += energy;
+    mix.nbc += nbc;
   });
   return mix;
 }
