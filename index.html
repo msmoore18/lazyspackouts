@@ -2239,6 +2239,11 @@
       </div>
       <div id="electric-bars" class="chem-bars"></div>
     </div>
+    <div class="filter-bar">
+      <span class="filter-label">Rate schedule</span>
+      <select id="electric-schedule-filter" onchange="renderElectric()"></select>
+      <span class="filter-hint">Charges and rates charts only</span>
+    </div>
     <div class="chem-chart-wrap">
       <div class="chem-chart-title">Charges by year</div>
       <div class="water-legend">
@@ -5318,11 +5323,54 @@ function renderElectric() {
   renderElectricYearly(meter);
 }
 
+function electricRateCode(s) {
+  const t = String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  if (!t || t === 'NONE') return '';
+  if (/^NEM/.test(t)) return 'NEM2M';
+  const m = t.match(/^(AGA1|AGA2|AG4B|AGB|AGC|ECLSD)/);
+  return m ? m[1] : '';
+}
+const ELECTRIC_RATE_LABELS = {
+  AGA1: 'AGA1 — Ag <35 kW Low Use',
+  AGA2: 'AGA2 — Ag <35 kW High Use',
+  AGB: 'AGB — Ag 35+ kW Med Use',
+  AGC: 'AGC — Ag 35+ kW High Use',
+  AG4B: 'AG4B — Time-of-Use',
+  NEM2M: 'NEM2M',
+  ECLSD: 'ECLSD'
+};
+function electricSelectedSchedule() {
+  const sel = document.getElementById('electric-schedule-filter');
+  return sel && sel.value ? sel.value : 'all';
+}
+function initElectricScheduleFilter() {
+  const sel = document.getElementById('electric-schedule-filter');
+  if (!sel) return;
+  const codes = [];
+  electricData.forEach(function(r) {
+    const c = electricRateCode(r.rateSchedule);
+    if (c && codes.indexOf(c) < 0) codes.push(c);
+  });
+  const order = ['AGA1','AGA2','AGB','AGC','AG4B','NEM2M','ECLSD'];
+  codes.sort(function(a, b) {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  const prev = sel.value || 'all';
+  sel.innerHTML = '<option value="all">All schedules</option>' + codes.map(function(c) {
+    const label = ELECTRIC_RATE_LABELS[c] || c;
+    return '<option value="' + chemEsc(c) + '">' + chemEsc(label) + '</option>';
+  }).join('');
+  if (prev === 'all' || codes.indexOf(prev) >= 0) sel.value = prev;
+  else sel.value = 'all';
+}
 function electricRowsScoped(meter, year) {
+  const sched = electricSelectedSchedule();
   return electricData.filter(function(r) {
     if (year && electricYear(r) !== year) return false;
-    if (!meter || meter === 'all') return true;
-    return r.displayName === meter;
+    if (meter && meter !== 'all' && r.displayName !== meter) return false;
+    if (sched && sched !== 'all' && electricRateCode(r.rateSchedule) !== sched) return false;
+    return true;
   });
 }
 function electricAvg(vals) {
@@ -5344,6 +5392,7 @@ function electricYearMix(meter, year) {
 }
 
 function renderElectricYearly(meter) {
+  initElectricScheduleFilter();
   const years = electricYearsInData().slice().sort(function(a, b) { return a - b; });
   const mixEl = document.getElementById('electric-mix-bars');
   const rateEl = document.getElementById('electric-rate-bars');
