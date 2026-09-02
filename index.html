@@ -5379,6 +5379,12 @@ function electricAvg(vals) {
   if (!nums.length) return null;
   return nums.reduce(function(s, n) { return s + n; }, 0) / nums.length;
 }
+function electricSaneEnergyRate(n) {
+  return (n != null && isFinite(n) && n > 0 && n < 1) ? n : null;
+}
+function electricSaneDemandRate(n) {
+  return (n != null && isFinite(n) && n > 0 && n < 50) ? n : null;
+}
 function electricYearMix(meter, year) {
   const rows = electricRowsScoped(meter, year);
   const mix = { customer: 0, demand: 0, energy: 0, nbc: 0, any: false };
@@ -5449,15 +5455,15 @@ function renderElectricYearly(meter) {
     const series = years.map(function(y) {
       const rows = electricRowsScoped(meter, y);
       if (electricRateView === 'demand') {
-        return { y: y, a: electricAvg(rows.map(function(r) { return r.demandRate; })), b: null };
+        return { y: y, a: electricAvg(rows.map(function(r) { return electricSaneDemandRate(r.demandRate); })), b: null };
       }
       if (electricRateView === 'customer') {
         return { y: y, a: electricAvg(rows.map(function(r) { return r.customerRate; })), b: null };
       }
       return {
         y: y,
-        a: electricAvg(rows.map(function(r) { return r.peakRate; })),
-        b: electricAvg(rows.map(function(r) { return r.offPeakRate; }))
+        a: electricAvg(rows.map(function(r) { return electricSaneEnergyRate(r.peakRate); })),
+        b: electricAvg(rows.map(function(r) { return electricSaneEnergyRate(r.offPeakRate); }))
       };
     });
     function showRate(n) {
