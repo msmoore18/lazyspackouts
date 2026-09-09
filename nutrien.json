@@ -1,5 +1,44 @@
 [
   {
+    "date": "2026-09-04",
+    "year": 2026,
+    "name": "PHYCOTERRA 2.5GA",
+    "category": "Soil amendment",
+    "productType": "Other",
+    "quantity": 10.0,
+    "unit": "GA",
+    "unitPrice": 40.0,
+    "cost": 400.0,
+    "invoiceId": "59172798",
+    "productNumber": "1000681467"
+  },
+  {
+    "date": "2026-08-31",
+    "year": 2026,
+    "name": "DIBROM 8 EMULS 4X1GA",
+    "category": "Insecticide",
+    "productType": "Chemical",
+    "quantity": 5.0,
+    "unit": "GA",
+    "unitPrice": 156.8181,
+    "cost": 784.09,
+    "invoiceId": "59161719",
+    "productNumber": "1000005776"
+  },
+  {
+    "date": "2026-08-31",
+    "year": 2026,
+    "name": "SST CALCIUM 2X2.5GA",
+    "category": "Fertilizer",
+    "productType": "Fertilizer",
+    "quantity": 7.5,
+    "unit": "GA",
+    "unitPrice": 25.3846,
+    "cost": 190.38,
+    "invoiceId": "59161719",
+    "productNumber": "1001323301"
+  },
+  {
     "date": "2026-08-28",
     "year": 2026,
     "name": "ACTARA 4X30OZ",
