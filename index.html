@@ -2968,21 +2968,10 @@ function updateCalendar() {
       const laborPills = blockSet.map(id =>
         `<span class="cal-pill labor">${chemEsc(laborPillLabel(id, laborByBlock[id]))}</span>`
       ).join('');
-      const sprayByBlock = {};
-      sprays.forEach(e => {
-        const id = laborBlockId(e.block);
-        const key = id || '_';
-        if (!sprayByBlock[key]) sprayByBlock[key] = [];
-        const lab = e.productShort || e.product || '';
-        if (lab && sprayByBlock[key].indexOf(lab) < 0) sprayByBlock[key].push(lab);
-      });
-      const sprayPills = Object.keys(sprayByBlock).sort(function(a, b) {
-        if (a === '_') return 1;
-        if (b === '_') return -1;
-        return sortBlockIds(a, b);
-      }).map(function(id) {
-        return '<span class="cal-pill spray">' + chemEsc(sprayPillLabel(id === '_' ? '' : id, sprayByBlock[id])) + '</span>';
-      }).join('');
+      // One compact Spray pill per day; click the day for full product/block detail.
+      const sprayPills = sprays.length
+        ? '<span class="cal-pill spray" title="Click day for spray details">Spray</span>'
+        : '';
       const foot = [];
       if (labor.length) {
         const laborTot = labor.reduce((s,e) => s + (e.amount || 0), 0);
