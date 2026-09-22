@@ -575,6 +575,21 @@
     box-sizing: border-box;
   }
 
+
+  .final-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: #e8f5e9;
+    color: #2e7d32;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
   .cal-legend {
     display: flex;
     gap: 14px;
@@ -2273,6 +2288,7 @@
 
 let harvestData = [];
 let packoutData = [];
+let poolData = [];
 let laborData = [];
 let nutrienData = [];
 let sprayData = [];
@@ -2494,6 +2510,31 @@ function cropYearOf(dateStr) {
 function cropYearLabel(startYear) {
   return startYear + '–' + String(startYear + 1).slice(-2);
 }
+
+
+function poolCropYearOf(dateStr) {
+  // Pool settlements in November close the crop year that ended Oct 31.
+  const [y, m] = String(dateStr).slice(0, 10).split('-').map(Number);
+  if (!y || !m) return null;
+  if (m === 11) return y - 1;
+  return m >= 12 ? y : y - 1;
+}
+
+function blockIsFinal(block, yearF) {
+  const b = normBlock(block);
+  return poolData.some(p => {
+    if (normBlock(p.Block) !== b) return false;
+    if (!yearF || yearF === 'all') return true;
+    return poolCropYearOf(p.Date) == yearF;
+  });
+}
+
+function finalPillHtml(block, yearF) {
+  return blockIsFinal(block, yearF)
+    ? ' <span class="final-pill" title="Pool statement on file — final numbers for this crop year">Final</span>'
+    : '';
+}
+
 
 // Crop years 2024–25 and earlier use financials season totals (bins only).
 function isHistoricalPackoutYear(yearF) {
@@ -2745,7 +2786,7 @@ function filterPackout() {
     let html = '';
     rows.forEach(g => {
       html += `<tr class="row-group">
-      <td>Block ${g.block}</td>
+      <td>Block ${g.block}${finalPillHtml(g.block, yearF)}</td>
       <td>${g.variety}</td>
       <td>${g.totBins.toFixed(1)}</td>
     </tr>`;
@@ -2781,7 +2822,7 @@ function filterPackout() {
     const hData = harvestByBlock[g.block] || null;
 
     if (!g.records.length) {
-      html += `<tr class="row-empty"><td>Block ${g.block}</td><td>—</td><td>—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td>—</td><td>—</td></tr>`;
+      html += `<tr class="row-empty"><td>Block ${g.block}${finalPillHtml(g.block, yearF)}</td><td>—</td><td>—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">—</td><td>—</td><td>—</td></tr>`;
       return;
     }
 
@@ -2800,7 +2841,7 @@ function filterPackout() {
     const estBins = estimatedBins(g.block, yearF);
     const multi = g.records.length > 1;
     html += `<tr class="row-group" onclick="toggleBlock('${bid}')">
-      <td>${multi ? `<span class="expand-icon" id="icon-${bid}">▶</span>` : ''}Block ${g.block}${multi ? ` <span style="color:var(--text-light);font-weight:400;font-size:11px">(${g.records.length})</span>` : ''}</td>
+      <td>${multi ? `<span class="expand-icon" id="icon-${bid}">▶</span>` : ''}Block ${g.block}${finalPillHtml(g.block, yearF)}${multi ? ` <span style="color:var(--text-light);font-weight:400;font-size:11px">(${g.records.length})</span>` : ''}</td>
       <td>${g.variety}</td>
       <td>${pQtyFmt}</td>
       <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}">${hQtyFmt}</td>
@@ -3584,6 +3625,32 @@ function parseWorkbook(wb) {
         'Total Juice Util%':             parseFloat(r['Total Juice Util%'])  || 0,
       };
     });
+
+  // ── Pool Statements ──
+  poolData = [];
+  const poolWs = wb.Sheets['Pool Statements'];
+  if (poolWs) {
+    const poolRows = XLSX.utils.sheet_to_json(poolWs, { raw: true, defval: null });
+    poolData = poolRows
+      .filter(r => r['Block'] != null && r['Date'] != null)
+      .map(r => {
+        let dateStr = r['Date'];
+        if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
+        if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
+        if (typeof dateStr === 'string' && dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            const [mo, dy, yr] = parts;
+            dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+          }
+        }
+        dateStr = String(dateStr).slice(0, 10);
+        return {
+          Block: String(r['Block']).toUpperCase().trim(),
+          Date: dateStr,
+        };
+      });
+  }
 
 
   // ── Contract Labor ──
