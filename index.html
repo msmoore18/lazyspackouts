@@ -2733,11 +2733,11 @@ function filterPackout() {
     g.totOther  += d['Total Other']  || 0;
     g.totWaste  += d['Total Waste']  || 0;
     g.totJuice  += d['Total Juice']  || 0;
-    g.wFancy  += (d['Total Fancy PkOut%']  || 0) * fb;
-    g.wChoice += (d['Total Choice PkOut%'] || 0) * fb;
-    g.wOther  += (d['Total Other PkOut%']  || 0) * fb;
-    g.wWaste  += (d['Total Waste PkOut%']  || 0) * fb;
-    g.wJuice  += (d['Total Juice PkOut%']  || 0) * fb;
+    g.wFancy  += (d['Total Fancy Util%']  || 0) * fb;
+    g.wChoice += (d['Total Choice Util%'] || 0) * fb;
+    g.wOther  += (d['Total Other Util%']  || 0) * fb;
+    g.wWaste  += (d['Total Waste Util%']  || 0) * fb;
+    g.wJuice  += (d['Total Juice Util%']  || 0) * fb;
   });
 
   const extraOrder = ['2'];
@@ -2850,7 +2850,7 @@ function filterPackout() {
           <td>${rQty}</td>
           <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}"></td>
           <td class="harvest-col" style="display:${harvestColsVisible?'':'none'}"></td>
-          <td>${gradeBar(r['Total Fancy']||0, r['Total Fancy PkOut%']||0, r['Total Choice']||0, r['Total Choice PkOut%']||0, r['Total Other']||0, r['Total Other PkOut%']||0, r['Total Waste']||0, r['Total Waste PkOut%']||0, r['Total Juice']||0, r['Total Juice PkOut%']||0)}</td>
+          <td>${gradeBar(r['Total Fancy']||0, r['Total Fancy Util%']||0, r['Total Choice']||0, r['Total Choice Util%']||0, r['Total Other']||0, r['Total Other Util%']||0, r['Total Waste']||0, r['Total Waste Util%']||0, r['Total Juice']||0, r['Total Juice Util%']||0)}</td>
           <td></td>
         </tr>`;
       });
@@ -3604,15 +3604,15 @@ function parseWorkbook(wb) {
           return 0;
         })(),
         'Total Fancy':                    parseFloat(r['Total Fancy'] ?? r['Total Fancy (CTN)'])   || 0,
-        'Total Fancy PkOut%':             parseFloat(r['Total Fancy PkOut%'])  || 0,
+        'Total Fancy Util%':             parseFloat(r['Total Fancy Util%'])  || 0,
         'Total Choice':                   parseFloat(r['Total Choice'] ?? r['Total Choice (CTN)'])  || 0,
-        'Total Choice PkOut%':            parseFloat(r['Total Choice PkOut%']) || 0,
+        'Total Choice Util%':            parseFloat(r['Total Choice Util%']) || 0,
         'Total Other':                    parseFloat(r['Total Other'] ?? r['Total Other (CTN)'])   || 0,
-        'Total Other PkOut%':             parseFloat(r['Total Other PkOut%'])  || 0,
+        'Total Other Util%':             parseFloat(r['Total Other Util%'])  || 0,
         'Total Waste':                    parseFloat(r['Total Waste'] ?? r['Total Waste (CTN)'])   || 0,
-        'Total Waste PkOut%':             parseFloat(r['Total Waste PkOut%'])  || 0,
+        'Total Waste Util%':             parseFloat(r['Total Waste Util%'])  || 0,
         'Total Juice':                    parseFloat(r['Total Juice'] ?? r['Total Juice (CTN)'])   || 0,
-        'Total Juice PkOut%':             parseFloat(r['Total Juice PkOut%'])  || 0,
+        'Total Juice Util%':             parseFloat(r['Total Juice Util%'])  || 0,
       };
     });
 
