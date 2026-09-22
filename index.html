@@ -1951,6 +1951,7 @@
   <div class="brand">Lazy S Ranch</div>
   <div class="nav-tabs">
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
+    <div class="nav-tab" data-section="pool" onclick="showSection('pool',this)">Pool Statements</div>
     <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Calendar</div>
     <div class="nav-tab" data-section="labor" onclick="showSection('labor',this)">Contract Labor</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
@@ -1963,6 +1964,7 @@
 
 <div class="mobile-menu" id="mobile-menu">
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
+  <div class="mobile-menu-item" onclick="showSection('pool',this);toggleMobile()">Pool Statements</div>
   <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Calendar</div>
   <div class="mobile-menu-item" onclick="showSection('labor',this);toggleMobile()">Contract Labor</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
@@ -2017,6 +2019,37 @@
         </colgroup>
         <thead id="packout-head"></thead>
         <tbody id="packout-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- POOL STATEMENTS SECTION -->
+  <div id="pool-section" class="section">
+    <div class="page-title">Pool Statements</div>
+    <div class="filter-bar">
+      <span class="filter-label">Crop Year</span>
+      <select id="year-filter-pool" onchange="renderPoolStatements()"></select>
+      <span class="filter-hint">Nov–Oct · click a row for sizes &amp; charges</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Block</th>
+            <th>Variety</th>
+            <th>Date</th>
+            <th>Bins</th>
+            <th>Fancy</th>
+            <th>Choice</th>
+            <th>Waste</th>
+            <th>Juice</th>
+            <th>Credits</th>
+            <th>Charges</th>
+            <th>Net Return</th>
+            <th>Net/Bin</th>
+          </tr>
+        </thead>
+        <tbody id="pool-body"></tbody>
       </table>
     </div>
   </div>
@@ -2289,6 +2322,8 @@
 let harvestData = [];
 let packoutData = [];
 let poolData = [];
+let poolSizesData = [];
+let poolChargesData = [];
 let laborData = [];
 let nutrienData = [];
 let sprayData = [];
@@ -2463,7 +2498,7 @@ function showSection(name, el) {
 
   const rangeBar = document.getElementById('global-range-bar');
   if (rangeBar) {
-    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric' || name === 'packout' || name === 'water') ? 'none' : '';
+    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric' || name === 'packout' || name === 'water' || name === 'pool') ? 'none' : '';
   }
   const rangeLabel = document.getElementById('range-bar-label');
   const rangeHint = document.getElementById('range-bar-hint');
@@ -2482,6 +2517,7 @@ function showSection(name, el) {
 
   if (name === 'harvest') updateCalendar();
   if (name === 'packout') filterPackout();
+  if (name === 'pool') renderPoolStatements();
   if (name === 'labor') renderLabor();
   if (name === 'chemicals') renderChemicalsPage();
   if (name === 'water') renderWater();
@@ -2513,11 +2549,11 @@ function cropYearLabel(startYear) {
 
 
 function poolCropYearOf(dateStr) {
-  // Pool settlements in November close the crop year that ended Oct 31.
-  const [y, m] = String(dateStr).slice(0, 10).split('-').map(Number);
-  if (!y || !m) return null;
-  if (m === 11) return y - 1;
-  return m >= 12 ? y : y - 1;
+  // Prefer cropYearOf (Nov–Oct). Null/missing dates (e.g. Block 3) → crop year 2025.
+  if (!dateStr) return 2025;
+  const s = String(dateStr).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return 2025;
+  return cropYearOf(s);
 }
 
 function blockIsFinal(block, yearF) {
@@ -2880,6 +2916,179 @@ function toggleBlock(bid) {
   document.querySelectorAll('.detail-' + bid).forEach(r => r.classList.toggle('visible'));
   const icon = document.getElementById('icon-' + bid);
   if (icon) icon.classList.toggle('expanded');
+}
+
+// ── POOL STATEMENTS ──────────────────────────────────────────────────────────
+
+function poolMoney(n) {
+  if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
+  return laborMoney(Number(n));
+}
+
+function poolFmtNum(n, digits) {
+  if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
+  const d = digits == null ? 0 : digits;
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function poolSameKey(aDate, bDate) {
+  return (aDate || null) === (bDate || null);
+}
+
+function poolMatchRows(arr, block, dateStr) {
+  const b = normBlock(block);
+  return arr.filter(r => normBlock(r.Block) === b && poolSameKey(r.Date, dateStr || null));
+}
+
+function initPoolFilters() {
+  const sel = document.getElementById('year-filter-pool');
+  if (!sel) return;
+  const years = [...new Set(poolData.map(p => poolCropYearOf(p.Date)))].filter(y => y != null).sort((a,b) => b - a);
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">All Years</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = cropYearLabel(y);
+    sel.appendChild(o);
+  });
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else if (years.length) sel.value = String(years[0]);
+  else sel.value = 'all';
+}
+
+function renderPoolStatements() {
+  const tbody = document.getElementById('pool-body');
+  if (!tbody) return;
+  const yearSel = document.getElementById('year-filter-pool');
+  const yearF = (yearSel && yearSel.value) ? yearSel.value : 'all';
+  let rows = poolData.slice();
+  if (yearF && yearF !== 'all') {
+    rows = rows.filter(p => poolCropYearOf(p.Date) == yearF);
+  }
+  rows.sort((a, b) => {
+    const ai = BLOCK_ORDER.indexOf(normBlock(a.Block));
+    const bi = BLOCK_ORDER.indexOf(normBlock(b.Block));
+    const ao = ai === -1 ? 999 : ai;
+    const bo = bi === -1 ? 999 : bi;
+    if (ao !== bo) return ao - bo;
+    return String(a.Date || '').localeCompare(String(b.Date || ''));
+  });
+  if (!rows.length) {
+    window._poolViewRows = [];
+    tbody.innerHTML = '<tr><td colspan="12" style="color:var(--text-light)">No pool statements for this crop year.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((p, idx) => {
+    const bid = normBlock(p.Block);
+    return '<tr class="row-group" onclick="showPoolDetail(' + idx + ')">' +
+      '<td>Block ' + chemEsc(bid) + ' <span class="final-pill" title="Pool statement on file">Final</span></td>' +
+      '<td>' + chemEsc(p.Variety || '—') + '</td>' +
+      '<td>' + (p.Date ? laborFmtDate(p.Date) : '—') + '</td>' +
+      '<td>' + poolFmtNum(p.Bins, p.Bins != null && p.Bins % 1 ? 2 : 0) + '</td>' +
+      '<td>' + poolFmtNum(p.FancyCTN) + '</td>' +
+      '<td>' + poolFmtNum(p.ChoiceCTN) + '</td>' +
+      '<td>' + poolFmtNum(p.WasteCTN) + '</td>' +
+      '<td>' + poolFmtNum(p.JuiceCTN) + '</td>' +
+      '<td>' + poolMoney(p.TotalCredits) + '</td>' +
+      '<td>' + poolMoney(p.TotalCharges) + '</td>' +
+      '<td>' + poolMoney(p.NetReturn) + '</td>' +
+      '<td>' + poolMoney(p.NetPerBin) + '</td>' +
+      '</tr>';
+  }).join('');
+  // stash filtered order for modal index
+  window._poolViewRows = rows;
+}
+
+function showPoolDetail(idx) {
+  const rows = window._poolViewRows || poolData;
+  const p = rows[idx];
+  if (!p) return;
+  const bid = normBlock(p.Block);
+  const sizes = poolMatchRows(poolSizesData, bid, p.Date);
+  const charges = poolMatchRows(poolChargesData, bid, p.Date);
+
+  const gradeOrder = { FANCY: 0, CHOICE: 1, WASTE: 2, JUICE: 3 };
+  sizes.sort((a, b) => {
+    const ga = gradeOrder[a.Grade] != null ? gradeOrder[a.Grade] : 9;
+    const gb = gradeOrder[b.Grade] != null ? gradeOrder[b.Grade] : 9;
+    if (ga !== gb) return ga - gb;
+    const sa = parseFloat(a.Size), sb = parseFloat(b.Size);
+    if (Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) return sa - sb;
+    return String(a.Size).localeCompare(String(b.Size));
+  });
+
+  let html = '<div class="modal-title">Block ' + chemEsc(bid) + ' · ' + chemEsc(p.Variety || '') + '</div>';
+  html += '<div style="font-size:13px;color:var(--text-light);margin:-4px 0 12px">' +
+    chemEsc(p.Pool || '—') +
+    (p.Date ? ' · Settled ' + laborFmtDate(p.Date) : '') +
+    '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;font-size:13px">';
+  const picks = (p.PicksFrom || p.PicksTo)
+    ? ((p.PicksFrom ? laborFmtDate(p.PicksFrom) : '—') + ' → ' + (p.PicksTo ? laborFmtDate(p.PicksTo) : '—'))
+    : '—';
+  [[ 'Picks', picks ],
+   [ 'Field Boxes', poolFmtNum(p.FieldBoxes) ],
+   [ 'Bins', poolFmtNum(p.Bins, p.Bins != null && p.Bins % 1 ? 2 : 0) ],
+   [ 'Acres', poolFmtNum(p.Acres, 1) ],
+  ].forEach(function(pair) {
+    html += '<div style="background:var(--bg,#f6f7f4);border:1px solid var(--border);border-radius:8px;padding:10px 12px">' +
+      '<div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin-bottom:4px">' + pair[0] + '</div>' +
+      '<div style="font-weight:600">' + pair[1] + '</div></div>';
+  });
+  html += '</div>';
+
+  html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Size breakdown</div>';
+  if (sizes.length) {
+    html += '<table class="modal-table"><thead><tr><th>Grade</th><th>Size</th><th>Std CTN</th><th>%</th><th>FOB</th><th>Credits $</th></tr></thead><tbody>';
+    let lastGrade = null;
+    let creditTot = 0;
+    sizes.forEach(s => {
+      if (s.Grade !== lastGrade) {
+        html += '<tr style="background:rgba(0,0,0,0.03)"><td colspan="6" style="font-weight:600;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-light)">' +
+          chemEsc(s.Grade || '—') + '</td></tr>';
+        lastGrade = s.Grade;
+      }
+      if (s.Credits != null) creditTot += s.Credits;
+      html += '<tr><td>' + chemEsc(s.Grade || '—') + '</td><td>' + chemEsc(s.Size || '—') + '</td>' +
+        '<td>' + poolFmtNum(s.StdCTN) + '</td>' +
+        '<td>' + (s.Pct == null ? '—' : poolFmtNum(s.Pct, 0) + '%') + '</td>' +
+        '<td>' + (s.FOB == null ? '—' : Number(s.FOB).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })) + '</td>' +
+        '<td>' + poolMoney(s.Credits) + '</td></tr>';
+    });
+    html += '<tr style="font-weight:600;border-top:2px solid var(--border)"><td colspan="5">Size credits total</td><td>' + poolMoney(creditTot) + '</td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--text-light);margin-bottom:8px">No size rows for this statement.</div>';
+  }
+
+  html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:16px 0 6px">Charges</div>';
+  if (charges.length) {
+    html += '<table class="modal-table"><thead><tr><th>Charge</th><th>Rate/Note</th><th>Amount</th></tr></thead><tbody>';
+    let chgTot = 0;
+    charges.forEach(c => {
+      if (c.Amount != null) chgTot += c.Amount;
+      html += '<tr><td>' + chemEsc(c.Charge || '—') + '</td><td>' + chemEsc(c.RateNote || '—') + '</td><td>' + poolMoney(c.Amount) + '</td></tr>';
+    });
+    html += '<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total charges</td><td></td><td>' + poolMoney(p.TotalCharges != null ? p.TotalCharges : chgTot) + '</td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--text-light);margin-bottom:8px">No charge rows for this statement.</div>';
+  }
+
+  html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:16px 0 6px">Settlement</div>';
+  html += '<table class="modal-table"><tbody>' +
+    '<tr><td>Total Credits</td><td>' + poolMoney(p.TotalCredits) + '</td></tr>' +
+    '<tr><td>Total Charges</td><td>' + poolMoney(p.TotalCharges) + '</td></tr>' +
+    '<tr><td>Net Return</td><td>' + poolMoney(p.NetReturn) + '</td></tr>' +
+    '<tr><td>Prior Advances</td><td>' + poolMoney(p.PriorAdvances) + '</td></tr>' +
+    '<tr style="font-weight:600"><td>Net Less Advances</td><td>' + poolMoney(p.NetLessAdvances) + '</td></tr>' +
+    '<tr><td>Net Per Bin</td><td>' + poolMoney(p.NetPerBin) + '</td></tr>' +
+    '</tbody></table>';
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
 }
 
 // ── HARVEST CALENDAR ─────────────────────────────────────────────────────────
@@ -3615,32 +3824,90 @@ function parseWorkbook(wb) {
       };
     });
 
-  // ── Pool Statements ──
+  // ── Pool Statements / Sizes / Charges ──
+  function poolParseDate(val) {
+    if (val == null || val === '') return null;
+    let dateStr = val;
+    if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
+    if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const [mo, dy, yr] = parts;
+        dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
+      }
+    }
+    dateStr = String(dateStr).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || dateStr.startsWith('NaN') || dateStr === 'null') return null;
+    return dateStr;
+  }
+  function poolNumOrNull(v) {
+    if (v == null || v === '') return null;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
   poolData = [];
   const poolWs = wb.Sheets['Pool Statements'];
   if (poolWs) {
     const poolRows = XLSX.utils.sheet_to_json(poolWs, { raw: true, defval: null });
     poolData = poolRows
-      .filter(r => r['Block'] != null && r['Date'] != null)
-      .map(r => {
-        let dateStr = r['Date'];
-        if (dateStr instanceof Date) dateStr = excelDateToStr(dateStr);
-        if (typeof dateStr === 'number') dateStr = excelDateToStr(dateStr);
-        if (typeof dateStr === 'string' && dateStr.includes('/')) {
-          const parts = dateStr.split('/');
-          if (parts.length === 3) {
-            const [mo, dy, yr] = parts;
-            dateStr = yr.padStart(4,'0') + '-' + mo.padStart(2,'0') + '-' + dy.padStart(2,'0');
-          }
-        }
-        dateStr = String(dateStr).slice(0, 10);
-        return {
-          Block: String(r['Block']).toUpperCase().trim(),
-          Date: dateStr,
-        };
-      });
+      .filter(r => r['Block'] != null && String(r['Block']).trim() !== '')
+      .map(r => ({
+        Block: String(r['Block']).toUpperCase().trim(),
+        Date: poolParseDate(r['Date']),
+        Variety: String(r['Variety'] || '').toUpperCase().trim(),
+        Pool: String(r['Pool'] || '').trim(),
+        PicksFrom: poolParseDate(r['Picks From']),
+        PicksTo: poolParseDate(r['Picks To']),
+        FieldBoxes: poolNumOrNull(r['Field Boxes']),
+        Bins: poolNumOrNull(r['Bins']),
+        Acres: poolNumOrNull(r['Acres']),
+        FancyCTN: poolNumOrNull(r['Fancy CTN']),
+        ChoiceCTN: poolNumOrNull(r['Choice CTN']),
+        WasteCTN: poolNumOrNull(r['Waste CTN']),
+        JuiceCTN: poolNumOrNull(r['Juice CTN']),
+        TotalCredits: poolNumOrNull(r['Total Credits $']),
+        TotalCharges: poolNumOrNull(r['Total Charges']),
+        NetReturn: poolNumOrNull(r['Net Return']),
+        PriorAdvances: poolNumOrNull(r['Prior Advances']),
+        NetLessAdvances: poolNumOrNull(r['Net Less Advances']),
+        NetPerBin: poolNumOrNull(r['Net Per Bin']),
+      }));
   }
 
+  poolSizesData = [];
+  const poolSizesWs = wb.Sheets['Pool Sizes'];
+  if (poolSizesWs) {
+    const sizeRows = XLSX.utils.sheet_to_json(poolSizesWs, { raw: true, defval: null });
+    poolSizesData = sizeRows
+      .filter(r => r['Block'] != null && String(r['Block']).trim() !== '')
+      .map(r => ({
+        Block: String(r['Block']).toUpperCase().trim(),
+        Date: poolParseDate(r['Date']),
+        Grade: String(r['Grade'] || '').toUpperCase().trim(),
+        Size: r['Size'] == null ? '' : String(r['Size']).trim(),
+        StdCTN: poolNumOrNull(r['Std CTN']),
+        Pct: poolNumOrNull(r['Pct']),
+        FOB: poolNumOrNull(r['FOB']),
+        Credits: poolNumOrNull(r['Credits $']),
+      }));
+  }
+
+  poolChargesData = [];
+  const poolChargesWs = wb.Sheets['Pool Charges'];
+  if (poolChargesWs) {
+    const chargeRows = XLSX.utils.sheet_to_json(poolChargesWs, { raw: true, defval: null });
+    poolChargesData = chargeRows
+      .filter(r => r['Block'] != null && String(r['Block']).trim() !== '')
+      .map(r => ({
+        Block: String(r['Block']).toUpperCase().trim(),
+        Date: poolParseDate(r['Date']),
+        Charge: String(r['Charge'] || '').trim(),
+        RateNote: r['Rate/Note'] == null ? '' : String(r['Rate/Note']).trim(),
+        Amount: poolNumOrNull(r['Amount']),
+      }));
+  }
 
   // ── Contract Labor ──
   laborData = [];
@@ -3814,6 +4081,8 @@ function parseWorkbook(wb) {
   if (curYearOpt) ypo.value = now.getFullYear();
 
   filterPackout();
+  initPoolFilters();
+  renderPoolStatements();
 
   const calYear = document.getElementById('year-filter-cal');
   if (calPinnedFromUrl) {
