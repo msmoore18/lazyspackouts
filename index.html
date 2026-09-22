@@ -3009,13 +3009,14 @@ function showDayDetail(day, month, year) {
   let html = `<div class="modal-title">${label}</div>`;
   if (harvest.length) {
     html += '<div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin:12px 0 6px">Harvest</div>';
-    html += '<table class="modal-table"><thead><tr><th>Block</th><th>Variety</th><th>Bins</th><th>Field Boxes</th></tr></thead><tbody>';
+    html += '<table class="modal-table"><thead><tr><th>Ticket</th><th>Block</th><th>Variety</th><th>Bins</th><th>Field Boxes</th></tr></thead><tbody>';
     harvest.forEach(e => {
-      html += `<tr><td>Block ${e.Block}</td><td>${e.Variety}</td><td>${e.Bins}</td><td>${(e.FB||0).toLocaleString()}</td></tr>`;
+      const ticket = (e.Ticket != null && e.Ticket !== '') ? String(e.Ticket) : '—';
+      html += `<tr><td>${chemEsc(ticket)}</td><td>Block ${chemEsc(String(e.Block ?? ''))}</td><td>${chemEsc(String(e.Variety || ''))}</td><td>${e.Bins}</td><td>${(e.FB||0).toLocaleString()}</td></tr>`;
     });
     const totalBins = harvest.reduce((s,e) => s + (e.Bins||0), 0);
     const totalFB   = harvest.reduce((s,e) => s + (e.FB||0), 0);
-    html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td>Total</td><td></td><td>${totalBins.toFixed(1)}</td><td>${totalFB.toLocaleString()}</td></tr>`;
+    html += `<tr style="font-weight:600;border-top:2px solid var(--border)"><td></td><td>Total</td><td></td><td>${totalBins.toFixed(1)}</td><td>${totalFB.toLocaleString()}</td></tr>`;
     html += '</tbody></table>';
   }
   if (labor.length) {
