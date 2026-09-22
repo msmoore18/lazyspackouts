@@ -5578,7 +5578,8 @@ loadSprays();
 
 <script>
 (function autoLoad() {
-  const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI).href;
+  const xlsxUrl = new URL('Compiled_Report.xlsx', document.baseURI);
+  xlsxUrl.searchParams.set('t', String(Date.now()));
   const finUrl = new URL('financials-revenue.json', document.baseURI);
   finUrl.searchParams.set('v', '6');
 
@@ -5588,7 +5589,7 @@ loadSprays();
     if (msg) document.getElementById('upload-status-manual').textContent = msg;
   }
 
-  const compiledP = fetch(xlsxUrl)
+  const compiledP = fetch(xlsxUrl.href, { cache: 'no-store' })
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + res.statusText);
       return res.arrayBuffer();
