@@ -2044,7 +2044,7 @@
     <span class="filter-label" style="margin-left:8px">To</span>
     <input type="month" id="range-to" onchange="onRangeChange()">
     <button type="button" class="range-clear" onclick="clearMonthRange()">Clear</button>
-    <span class="filter-hint" id="range-bar-hint">Crop year starts November</span>
+    <span class="filter-hint" id="range-bar-hint">Crop year starts October 15</span>
   </div>
 
   <!-- PACKOUT SECTION -->
@@ -2053,7 +2053,7 @@
     <div class="filter-bar">
       <span class="filter-label">Crop Year</span>
       <select id="year-filter-packout" onchange="filterPackout()"></select>
-      <span class="filter-hint">Nov–Oct</span>
+      <span class="filter-hint">Oct 15–Oct 14</span>
       <span class="filter-label" style="margin-left:8px">Block</span>
       <select id="block-filter-packout" onchange="filterPackout()"></select>
       <div id="packout-show-cols" style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -2091,7 +2091,7 @@
     <div class="filter-bar">
       <span class="filter-label">Crop Year</span>
       <select id="year-filter-pool" onchange="renderPoolStatements()"></select>
-      <span class="filter-hint">Nov–Oct · click a row for sizes &amp; charges</span>
+      <span class="filter-hint">Oct 15–Oct 14 · click a row for sizes &amp; charges</span>
     </div>
     <div class="table-wrap">
       <table>
@@ -2579,7 +2579,7 @@ function showSection(name, el) {
       rangeHint.textContent = 'Water year starts March';
     } else {
       rangeLabel.textContent = 'Crop year to date';
-      rangeHint.textContent = 'Crop year starts November';
+      rangeHint.textContent = 'Crop year starts October 15';
     }
   }
 
@@ -2606,9 +2606,10 @@ function toggleMobile() {
 // ── YEAR TYPE HELPERS ─────────────────────────────────────────────────────────
 
 function cropYearOf(dateStr) {
-  // Crop year starts November: Nov 1 Y through Oct 31 Y+1 is crop year Y (label Y–Y+1).
-  const [y, m] = dateStr.split('-').map(Number);
-  return m >= 11 ? y : y - 1;
+  // Crop year starts October 15: Oct 15 Y through Oct 14 Y+1 is crop year Y (label Y–Y+1).
+  const parts = String(dateStr || '').slice(0, 10).split('-').map(Number);
+  const y = parts[0], m = parts[1], d = parts[2] || 1;
+  return (m > 10 || (m === 10 && d >= 15)) ? y : y - 1;
 }
 
 function cropYearLabel(startYear) {
@@ -2617,7 +2618,7 @@ function cropYearLabel(startYear) {
 
 
 function poolCropYearOf(dateStr) {
-  // Prefer cropYearOf (Nov–Oct). Null/missing dates (e.g. Block 3) → crop year 2025.
+  // Prefer cropYearOf (Oct 15–Oct 14). Null/missing dates (e.g. Block 3) → crop year 2025.
   if (!dateStr) return 2025;
   const s = String(dateStr).slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return 2025;
