@@ -1938,7 +1938,6 @@
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
     <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Calendar</div>
     <div class="nav-tab" data-section="labor" onclick="showSection('labor',this)">Contract Labor</div>
-    <div class="nav-tab" data-section="financials" onclick="showSection('financials', this)">Financials</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
     <div class="nav-tab" data-section="water" onclick="showSection('water',this)">Water</div>
     <div class="nav-tab" data-section="electric" onclick="showSection('electric',this)">Electric Usage</div>
@@ -1951,7 +1950,6 @@
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
   <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Calendar</div>
   <div class="mobile-menu-item" onclick="showSection('labor',this);toggleMobile()">Contract Labor</div>
-  <div class="mobile-menu-item" data-section="financials" onclick="showSection('financials',this);toggleMobile()">Financials</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
   <div class="mobile-menu-item" onclick="showSection('water',this);toggleMobile()">Water</div>
   <div class="mobile-menu-item" onclick="showSection('electric',this);toggleMobile()">Electric Usage</div>
@@ -2082,35 +2080,6 @@
     </div>
   </div>
 
-  <!-- FINANCIALS -->
-  <div id="financials-section" class="section">
-    <div class="page-title">Financials</div>
-    <div class="filter-bar">
-      <span class="filter-label">Year</span>
-      <select id="fin-year-filter" onchange="renderFinancials()"></select>
-      <span class="filter-label" style="margin-left:8px">Compare</span>
-      <select id="fin-compare-filter" onchange="renderFinancials()">
-        <option value="avg">Historical average</option>
-      </select>
-      <span class="filter-hint">Revenue by block. Average is the prior 5 years.</span>
-    </div>
-    <div id="fin-chart-wrap" class="chem-chart-wrap">
-      <div class="chem-chart-title">Revenue by block</div>
-      <div class="water-legend">
-        <span><span class="water-swatch sel"></span> Selected</span>
-        <span><span class="water-swatch hist"></span> <span id="fin-compare-legend">Historical average</span></span>
-      </div>
-      <div id="fin-bars" class="chem-bars"></div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead id="fin-head"></thead>
-        <tbody id="fin-body"></tbody>
-      </table>
-    </div>
-    <div id="fin-summary" class="chem-summary"></div>
-    <div id="fin-empty" class="fin-empty" style="display:none"></div>
-  </div>
   <div id="chemicals-section" class="section">
     <div class="page-title">Chemicals &amp; Fertilizer</div>
     <div class="filter-bar">
@@ -2478,7 +2447,7 @@ function showSection(name, el) {
 
   const rangeBar = document.getElementById('global-range-bar');
   if (rangeBar) {
-    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric') ? 'none' : '';
+    rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric' || name === 'packout' || name === 'water') ? 'none' : '';
   }
   const rangeLabel = document.getElementById('range-bar-label');
   const rangeHint = document.getElementById('range-bar-hint');
@@ -2713,7 +2682,7 @@ function filterPackout() {
   let filtered = packoutData.filter(d => {
     const y = cropYearOf(d['Fruit Packed On']);
     const b = normBlock(d['Block ID']);
-    return (yearF === 'all' || y == yearF) && (blockF === 'all' || b === blockF) && dateInRange(d['Fruit Packed On']);
+    return (yearF === 'all' || y == yearF) && (blockF === 'all' || b === blockF);
   });
 
   const grouped = {};
@@ -4868,7 +4837,8 @@ function renderWater() {
   const monthNums = [3,4,5,6,7,8,9,10,11,12,1,2];
 
   const yearRows = waterData.filter(function(r) { return r.WaterYear === year; });
-  const rows = yearRows.filter(function(r) { return dateInRange(r.Date); });
+  // Full water year — global from/to bar is hidden on this tab
+  const rows = yearRows;
 
   const used = rows.reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
   const allUsed = yearRows.reduce(function(s, r) { return s + (r.AcreFeet || 0); }, 0);
