@@ -5184,12 +5184,27 @@ function waterYearsInData() {
   return years;
 }
 
+/** Water years with a full Mar–Feb month set (all 12 months present). Stub/YTD years are excluded from compare. */
+function waterCompleteYears() {
+  const monthsByYear = {};
+  waterData.forEach(function(r) {
+    const y = r.WaterYear;
+    const m = r.Month;
+    if (!y || !m) return;
+    if (!monthsByYear[y]) monthsByYear[y] = {};
+    monthsByYear[y][m] = true;
+  });
+  return waterYearsInData().filter(function(y) {
+    return Object.keys(monthsByYear[y] || {}).length >= 12;
+  });
+}
+
 let waterCompareReady = false;
 
 function initWaterCompare(year) {
   const sel = document.getElementById('water-compare-filter');
   if (!sel) return;
-  const years = waterYearsInData();
+  const years = waterCompleteYears();
   const others = years.filter(function(y) { return y !== year; });
   const prev = sel.value || 'avg';
   sel.innerHTML = '<option value="avg">Historical average</option>';
@@ -5249,7 +5264,7 @@ function renderWater() {
   const cmpSel = document.getElementById('water-compare-filter');
   const cmp = cmpSel ? cmpSel.value : 'avg';
   const cmpYear = (cmp && cmp !== 'avg') ? parseInt(cmp, 10) : 0;
-  const priorYears = waterYearsInData().filter(function(y) { return y < year; });
+  const priorYears = waterCompleteYears().filter(function(y) { return y < year; });
   const legend = document.getElementById('water-compare-legend');
   const cmpIsYear = cmpYear && cmpYear !== year;
   if (legend) legend.textContent = cmpIsYear ? String(cmpYear) : 'Historical average';
