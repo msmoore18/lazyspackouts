@@ -1975,7 +1975,7 @@
 
 <div class="content">
 
-  <div class="filter-bar range-bar" id="global-range-bar">
+  <div class="filter-bar range-bar" id="global-range-bar" style="display:none">
     <span class="filter-label" id="range-bar-label">Crop year to date</span>
     <span class="filter-label">From</span>
     <input type="month" id="range-from" onchange="onRangeChange()">
@@ -5820,6 +5820,17 @@ function renderElectricYearly(meter) {
 
 
 applyRangeFromUrl();
+// Packout is the default tab — keep global from/to hidden until a tab that uses it is selected.
+(function syncRangeBarToActiveTab() {
+  const active = document.querySelector('.nav-tab.active');
+  const name = active && active.getAttribute('data-section');
+  if (name) {
+    const rangeBar = document.getElementById('global-range-bar');
+    if (rangeBar) {
+      rangeBar.style.display = (name === 'maps' || name === 'financials' || name === 'harvest' || name === 'electric' || name === 'packout' || name === 'water' || name === 'pool') ? 'none' : '';
+    }
+  }
+})();
 loadNutrien();
 loadSprays();
 
