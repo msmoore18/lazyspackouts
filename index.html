@@ -939,293 +939,309 @@
   }
 
   /* ── FARM MAP (scoped under #maps-section) ── */
-  .content:has(#maps-section.active) {
-    max-width: none;
-    margin: 0;
-    padding: 0;
+  #maps-section .map-layer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
-  #maps-section.active {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 56px);
-    overflow: hidden;
+  #maps-section .toggle-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #maps-section .toggle-btn:hover { border-color: var(--mid); color: var(--text); }
+  #maps-section .toggle-btn.active {
+    background: var(--dark);
+    color: white;
+    border-color: var(--dark);
   }
 
   #farm-map-wrap {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    height: 100%;
-    background: #2C3E2B;
-  }
-
-  #maps-section .farm-map-toolbar {
-    flex-shrink: 0;
-    background: #2C3E2B;
-    color: white;
-    padding: 0.75rem 1.5rem 0.9rem;
-  }
-
-  #maps-section .layer-controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 0 auto;
-    max-width: 600px;
-  }
-
-  #maps-section .layer-controls h4 { display: none; }
-
-  #maps-section .toggle-btn {
-    flex: 1;
-    padding: 10px 20px;
-    border: 2px solid #ddd;
-    background: white;
+    background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: 'Jost', sans-serif;
-    transition: all 0.2s;
-    text-align: center;
-    color: #2C3E2B;
+    overflow: hidden;
   }
-
-  #maps-section .toggle-btn.active {
-    background: #E67E22;
-    color: white;
-    border-color: #E67E22;
-  }
-
-  #maps-section .toggle-btn:hover { border-color: #E67E22; }
 
   #maps-section .map-wrapper {
     display: grid;
-    grid-template-columns: 1fr 380px;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+    grid-template-columns: 1fr minmax(280px, 340px);
+    min-height: 480px;
+    height: calc(100vh - 220px);
+    max-height: 780px;
   }
 
   #farm-map {
     width: 100%;
     height: 100%;
-    min-height: 0;
-    background: #1a2e1c;
+    min-height: 360px;
+    background: var(--dark);
   }
 
   #maps-section .info-panel {
-    background: white;
-    padding: 2rem;
+    background: var(--card);
+    padding: 20px 18px;
     overflow-y: auto;
-    box-shadow: -4px 0 16px rgba(0,0,0,0.2);
+    border-left: 1px solid var(--border);
     position: relative;
   }
 
   #maps-section .info-panel.empty {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #999;
-    font-style: italic;
+    color: var(--text-light);
+    font-size: 13px;
     text-align: center;
+    padding: 28px 20px;
+    gap: 8px;
+  }
+
+  #maps-section .info-panel.empty .map-empty-hint {
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 220px;
+    line-height: 1.45;
   }
 
   #maps-section .block-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 3px solid #f0f0f0;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
   }
 
   #maps-section .block-header h2 {
-    color: #2C3E2B;
-    font-size: 1.8rem;
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--dark);
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     margin: 0;
   }
 
   #maps-section .block-color-indicator {
-    width: 35px;
-    height: 35px;
-    border-radius: 8px;
-    border: 3px solid #333;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   #maps-section .block-variety {
-    color: #E67E22;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 14px;
   }
 
   #maps-section .stat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.8rem;
-    margin-bottom: 1.5rem;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   #maps-section .stat-box {
-    background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 4px solid #4A6741;
+    background: var(--bg);
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
   }
 
   #maps-section .stat-label {
-    font-size: 0.75rem;
-    color: #666;
-    margin-bottom: 0.4rem;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-light);
+    margin-bottom: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.1em;
   }
 
   #maps-section .stat-value {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #2C3E2B;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--dark);
+    font-variant-numeric: tabular-nums;
   }
 
   #maps-section .info-section {
-    margin-top: 1.2rem;
-    padding-top: 1.2rem;
-    border-top: 2px solid #f0f0f0;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
   }
 
   #maps-section .info-section h3 {
-    color: #2C3E2B;
-    font-size: 1rem;
-    margin-bottom: 0.7rem;
+    color: var(--text-light);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
   }
 
   #maps-section .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid #f0f0f0;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
   }
 
   #maps-section .info-row:last-child { border-bottom: none; }
 
   #maps-section .info-label {
-    color: #666;
-    font-weight: 500;
-    font-size: 0.9rem;
+    color: var(--text-light);
+    font-size: 13px;
   }
 
   #maps-section .info-value {
-    color: #2C3E2B;
-    font-weight: 600;
-    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 500;
+    font-size: 13px;
+    text-align: right;
   }
 
   #maps-section .performance-badge {
     display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-top: 1rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 12px;
   }
 
-  #maps-section .performance-excellent { background: #4CAF50; color: white; }
-  #maps-section .performance-good { background: #FFC107; color: #333; }
-  #maps-section .performance-needs-attention { background: #F44336; color: white; }
+  #maps-section .performance-excellent { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  #maps-section .performance-good { background: #fff8e1; color: #8a6d00; border: 1px solid #ffe082; }
+  #maps-section .performance-needs-attention { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
 
-  .leaflet-popup-content-wrapper { border-radius: 8px; }
+  .leaflet-popup-content-wrapper {
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
   .leaflet-popup-content {
-    margin: 0.8rem;
+    margin: 10px 12px;
     font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    color: var(--text);
   }
 
   #maps-section .close-panel-btn {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #E67E22;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 28px;
-    line-height: 40px;
+    background: var(--card);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    line-height: 30px;
     text-align: center;
     cursor: pointer;
     display: none;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    font-family: 'Jost', sans-serif;
     -webkit-appearance: none;
   }
+  #maps-section .close-panel-btn:hover { color: var(--dark); border-color: var(--mid); }
 
   #maps-section .panel-header {
     display: none;
-    background: #E67E22;
-    padding: 12px 20px;
+    background: var(--dark);
+    padding: 12px 18px;
     color: white;
-    font-weight: bold;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     text-align: center;
-    border-radius: 20px 20px 0 0;
+    border-radius: 12px 12px 0 0;
     position: relative;
     cursor: pointer;
   }
 
   #maps-section .panel-header::before {
-    content: '▼ Close';
-    font-size: 16px;
+    content: 'Close';
   }
 
   #maps-section .mobile-close-btn {
-    background: #E67E22;
+    background: var(--dark);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'Jost', sans-serif;
     cursor: pointer;
-    margin-bottom: 1rem;
+    margin-bottom: 14px;
     width: 100%;
     display: none;
   }
 
-  #maps-section .close-button-wrapper { margin-bottom: 1rem; }
+  #maps-section .close-button-wrapper { margin-bottom: 4px; }
 
   #maps-section .year-selector {
-    margin-bottom: 1rem;
-    padding: 0.8rem;
-    background: #f9f9f9;
-    border-radius: 8px;
-    border-left: 4px solid #E67E22;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border-radius: 6px;
+    border: 1px solid var(--border);
   }
 
   #maps-section .year-selector label {
     display: block;
-    font-weight: 600;
-    color: #2C3E2B;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 6px;
   }
 
   #maps-section .year-selector select {
     width: 100%;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 2px solid #ddd;
+    font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--border);
     border-radius: 4px;
-    background: white;
+    background: var(--card);
+    color: var(--text);
     cursor: pointer;
-    appearance: auto;
-    background-image: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7d6c'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
   }
 
   #maps-section .year-selector select:focus {
     outline: none;
-    border-color: #E67E22;
+    border-color: var(--mid);
   }
 
   #maps-section .leaflet-marker-icon.block-label {
@@ -1238,14 +1254,19 @@
     cursor: pointer !important;
   }
 
-  @media (max-width: 768px) {
-    #maps-section .farm-map-toolbar { padding: 0.6rem 10px 0.75rem; }
-    #maps-section .layer-controls { gap: 8px; max-width: none; }
-    #maps-section .toggle-btn { padding: 10px 12px; font-size: 13px; }
+  @media (max-width: 900px) {
+    #maps-section .map-wrapper {
+      grid-template-columns: 1fr minmax(240px, 300px);
+    }
+  }
 
+  @media (max-width: 768px) {
     #maps-section .map-wrapper {
       grid-template-columns: 1fr;
       grid-template-rows: 1fr;
+      height: calc(100vh - 200px);
+      min-height: 420px;
+      max-height: none;
       position: relative;
     }
 
@@ -1259,8 +1280,10 @@
       transform: translateY(100%);
       transition: transform 0.3s ease-in-out;
       z-index: 1001;
-      border-radius: 20px 20px 0 0;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+      border-left: none;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 -8px 28px rgba(0,0,0,0.18);
+      border-top: 1px solid var(--border);
     }
 
     #maps-section .info-panel.visible { transform: translateY(0); }
@@ -2330,20 +2353,23 @@
     </div>
   </div>
   <div id="maps-section" class="section">
-    <div id="farm-map-wrap">
-      <div class="farm-map-toolbar">
-        <div class="layer-controls">
-          <button type="button" class="toggle-btn active" id="toggleBlocks">Blocks</button>
-          <button type="button" class="toggle-btn" id="toggleWells">Wells</button>
-          <button type="button" class="toggle-btn" id="toggleWindMachines">Wind Machines</button>
-        </div>
+    <div class="page-title">Maps</div>
+    <div class="filter-bar">
+      <span class="filter-label">Layers</span>
+      <div class="map-layer-toggle">
+        <button type="button" class="toggle-btn active" id="toggleBlocks">Blocks</button>
+        <button type="button" class="toggle-btn" id="toggleWells">Wells</button>
+        <button type="button" class="toggle-btn" id="toggleWindMachines">Wind Machines</button>
       </div>
+      <span class="filter-hint">Click a block or icon for details</span>
+    </div>
+    <div id="farm-map-wrap">
       <div class="map-wrapper">
         <div id="farm-map"></div>
         <div id="infoPanel" class="info-panel empty">
           <div class="panel-header" onclick="closeFarmMapPanel()"></div>
           <button type="button" class="close-panel-btn" onclick="closeFarmMapPanel()">×</button>
-          👆 Click on any block or icon on the map to view its details
+          <div class="map-empty-hint">Click any block or icon on the map to view details</div>
         </div>
       </div>
     </div>
@@ -6386,7 +6412,7 @@ const blockDetails = {
             
             panel.innerHTML = `
                 <div class="close-button-wrapper">
-                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">✕ Close</button>
+                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">Close</button>
                 </div>
                 
                 <div class="block-header">
@@ -6395,7 +6421,7 @@ const blockDetails = {
                 </div>
 
                 <div class="info-section">
-                    <h3>💧 Performance Metrics</h3>
+                    <h3>Performance Metrics</h3>
                 </div>
 
                 <div class="stat-grid">
@@ -6418,7 +6444,7 @@ const blockDetails = {
                 </div>
 
                 <div class="info-section">
-                    <h3>📊 Well Specifications</h3>
+                    <h3>Well Specifications</h3>
                     <div class="info-row">
                         <span class="info-label">Meter Number</span>
                         <span class="info-value">${well.meter}</span>
@@ -6460,7 +6486,7 @@ const blockDetails = {
             
             panel.innerHTML = `
                 <div class="close-button-wrapper">
-                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">✕ Close</button>
+                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">Close</button>
                 </div>
                 
                 <div class="block-header">
@@ -6469,7 +6495,7 @@ const blockDetails = {
                 </div>
 
                 <div class="info-section">
-                    <h3>🌬️ Equipment Details</h3>
+                    <h3>Equipment Details</h3>
                     <div class="info-row">
                         <span class="info-label">Type</span>
                         <span class="info-value">${wm.type}</span>
@@ -6771,7 +6797,7 @@ const blockDetails = {
 
             panel.innerHTML = `
                 <div class="close-button-wrapper">
-                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">✕ Close</button>
+                    <button class="mobile-close-btn" onclick="closeFarmMapPanel()">Close</button>
                 </div>
 
                 <div class="block-header">
