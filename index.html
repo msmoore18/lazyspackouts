@@ -226,6 +226,31 @@
 
   .range-bar { margin-bottom: 16px; }
 
+  .section-watermark-wrap {
+    position: relative;
+  }
+  .section-watermark {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .section-watermark span {
+    font-size: clamp(48px, 10vw, 96px);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: rgba(180, 40, 40, 0.18);
+    transform: rotate(-28deg);
+    white-space: nowrap;
+    user-select: none;
+    text-transform: uppercase;
+  }
+
+
   .range-clear {
     font-family: 'Jost', sans-serif;
     font-size: 12px;
@@ -1952,12 +1977,12 @@
   <div class="nav-tabs">
     <div class="nav-tab active" data-section="packout" onclick="showSection('packout',this)">Packout Data</div>
     <div class="nav-tab" data-section="pool" onclick="showSection('pool',this)">Pool Statements</div>
+    <div class="nav-tab" data-section="water" onclick="showSection('water',this)">Water</div>
+    <div class="nav-tab" data-section="maps" onclick="showSection('maps', this)">Maps</div>
     <div class="nav-tab" data-section="harvest" onclick="showSection('harvest',this)">Calendar</div>
     <div class="nav-tab" data-section="labor" onclick="showSection('labor',this)">Contract Labor</div>
     <div class="nav-tab" data-section="chemicals" onclick="showSection('chemicals',this)">Chemicals &amp; Fertilizer</div>
-    <div class="nav-tab" data-section="water" onclick="showSection('water',this)">Water</div>
     <div class="nav-tab" data-section="electric" onclick="showSection('electric',this)">Electric Usage</div>
-    <div class="nav-tab" data-section="maps" onclick="showSection('maps', this)">Maps</div>
   </div>
   <button class="menu-btn" onclick="toggleMobile()">☰</button>
 </div>
@@ -1965,12 +1990,12 @@
 <div class="mobile-menu" id="mobile-menu">
   <div class="mobile-menu-item active" onclick="showSection('packout',this);toggleMobile()">Packout Data</div>
   <div class="mobile-menu-item" onclick="showSection('pool',this);toggleMobile()">Pool Statements</div>
+  <div class="mobile-menu-item" onclick="showSection('water',this);toggleMobile()">Water</div>
+  <div class="mobile-menu-item" onclick="showSection('maps',this);toggleMobile()">Maps</div>
   <div class="mobile-menu-item" onclick="showSection('harvest',this);toggleMobile()">Calendar</div>
   <div class="mobile-menu-item" onclick="showSection('labor',this);toggleMobile()">Contract Labor</div>
   <div class="mobile-menu-item" onclick="showSection('chemicals',this);toggleMobile()">Chemicals &amp; Fertilizer</div>
-  <div class="mobile-menu-item" onclick="showSection('water',this);toggleMobile()">Water</div>
   <div class="mobile-menu-item" onclick="showSection('electric',this);toggleMobile()">Electric Usage</div>
-  <div class="mobile-menu-item" onclick="showSection('maps',this);toggleMobile()">Maps</div>
 </div>
 
 <div class="content">
@@ -2075,7 +2100,8 @@
   </div>
 
   <!-- CONTRACT LABOR -->
-  <div id="labor-section" class="section">
+  <div id="labor-section" class="section section-watermark-wrap">
+    <div class="section-watermark" aria-hidden="true"><span>NOT REVIEWED</span></div>
     <div class="page-title">Contract Labor</div>
     <div class="filter-bar">
       <span class="filter-hint">Jan–Dec fiscal year. Crop-year bar does not apply here.</span>
@@ -2128,7 +2154,8 @@
     </div>
   </div>
 
-  <div id="chemicals-section" class="section">
+  <div id="chemicals-section" class="section section-watermark-wrap">
+    <div class="section-watermark" aria-hidden="true"><span>NOT REVIEWED</span></div>
     <div class="page-title">Chemicals &amp; Fertilizer</div>
     <div class="filter-bar">
       <span class="filter-hint">Jan–Dec fiscal year. Crop-year bar does not apply here.</span>
@@ -2230,7 +2257,8 @@
       <div id="water-bars" class="chem-bars"></div>
     </div>
   </div>
-  <div id="electric-section" class="section">
+  <div id="electric-section" class="section section-watermark-wrap">
+    <div class="section-watermark" aria-hidden="true"><span>NOT REVIEWED</span></div>
     <div class="page-title">Electric Usage</div>
     <div class="filter-bar">
       <span class="filter-label">Meter</span>
